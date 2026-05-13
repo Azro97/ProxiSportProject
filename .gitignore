@@ -6,7 +6,6 @@ local.properties
 .DS_Store
 *.keystore
 !debug.keystore
-android/
 ios/
 *.orig.*
 *.jsbundle

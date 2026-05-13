@@ -2,31 +2,40 @@
 
 import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import { Text } from 'react-native';
 import { BottomTabParamList } from '../types';
-import MatchesScreen from '../screens/MatchesScreen';
+import CarteScreen from '../screens/carte/CarteScreen';
+import MatchsScreen from '../screens/matchs/MatchsScreen';
 import ClassementsScreen from '../screens/ClassementsScreen';
+import { theme } from '../theme';
 
 const Tab = createBottomTabNavigator<BottomTabParamList>();
 
 export default function BottomTabNavigator() {
   return (
     <Tab.Navigator
-      screenOptions={{
-        tabBarActiveTintColor: '#E63946',
+      screenOptions={({ route }) => ({
+        tabBarActiveTintColor: theme.colors.primary,
         tabBarInactiveTintColor: '#888',
-        tabBarStyle: { backgroundColor: '#fff', borderTopWidth: 1, borderTopColor: '#eee' },
+        tabBarStyle: {
+          backgroundColor: theme.colors.white,
+          borderTopWidth: 1,
+          borderTopColor: theme.colors.border,
+        },
         headerShown: false,
-      }}>
-      <Tab.Screen
-        name="Matchs"
-        component={MatchesScreen}
-        options={{ title: 'Matchs' }}
-      />
-      <Tab.Screen
-        name="Classements"
-        component={ClassementsScreen}
-        options={{ title: 'Classements' }}
-      />
+        tabBarIcon: ({ color, size }) => {
+          const icons: Record<string, string> = {
+            Carte: '🗺️',
+            Matchs: '⚽',
+            Classements: '🏆',
+          };
+          return <Text style={{ fontSize: size - 2 }}>{icons[route.name]}</Text>;
+        },
+      })}
+    >
+      <Tab.Screen name="Carte" component={CarteScreen} options={{ title: 'Carte' }} />
+      <Tab.Screen name="Matchs" component={MatchsScreen} options={{ title: 'Matchs' }} />
+      <Tab.Screen name="Classements" component={ClassementsScreen} options={{ title: 'Classements' }} />
     </Tab.Navigator>
   );
 }

@@ -1,22 +1,37 @@
 // src/screens/MatchDetailScreen.tsx
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   SafeAreaView,
   ScrollView,
+  ActivityIndicator,
 } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../types';
-import { getMatchById } from '../services/firebase';
+import { Match } from '../models/Match';
+import { getMatchById } from '../services/matchsService';
+import { theme } from '../theme';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'MatchDetail'>;
 
 export default function MatchDetailScreen({ route }: Props) {
   const { matchId } = route.params;
-  const match = getMatchById(matchId);
+  const [match, setMatch] = useState<Match | null | undefined>(undefined); // undefined = loading
+
+  useEffect(() => {
+    getMatchById(matchId).then(setMatch);
+  }, [matchId]);
+
+  if (match === undefined) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <ActivityIndicator style={styles.center} color={theme.colors.primary} size="large" />
+      </SafeAreaView>
+    );
+  }
 
   if (!match) {
     return (
@@ -28,8 +43,7 @@ export default function MatchDetailScreen({ route }: Props) {
     );
   }
 
-  const dateObj = new Date(match.dateHeure as string);
-  const formattedDate = dateObj.toLocaleString('fr-FR', {
+  const formattedDate = match.dateHeure.toLocaleString('fr-FR', {
     weekday: 'long',
     day: '2-digit',
     month: 'long',
@@ -38,52 +52,41 @@ export default function MatchDetailScreen({ route }: Props) {
     minute: '2-digit',
   });
 
-  const hasScore =
-    match.scoreDomicile !== undefined && match.scoreExterieur !== undefined;
+  const sportColor = theme.sportColors[match.sport] ?? theme.colors.primary;
 
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView contentContainerStyle={styles.content}>
-        {/* Badge sport + division */}
+        {/* Sport + division badges */}
         <View style={styles.badgeRow}>
-          <View style={styles.badge}>
-            <Text style={styles.badgeText}>{match.sport}</Text>
+          <View style={[styles.badge, { backgroundColor: sportColor }]}>
+            <Text style={styles.badgeText}>{match.sport.toUpperCase()}</Text>
           </View>
           <View style={[styles.badge, styles.badgeSecondary]}>
             <Text style={styles.badgeText}>{match.division}</Text>
           </View>
         </View>
 
-        {/* Score / Teams */}
+        {/* Teams */}
         <View style={styles.scoreCard}>
           <View style={styles.teamBlock}>
-            <Text style={styles.teamName}>{match.domicile}</Text>
-            <Text style={styles.teamLabel}>Domicile</Text>
+            <Text style={styles.teamName}>{match.equipeA_nom}</Text>
+            <Text style={styles.teamLabel}>Équipe A</Text>
           </View>
           <View style={styles.scoreBlock}>
-            {hasScore ? (
-              <Text style={styles.scoreBig}>
-                {match.scoreDomicile} â€” {match.scoreExterieur}
-              </Text>
-            ) : (
-              <Text style={styles.scoreVs}>vs</Text>
-            )}
-            <View style={[styles.statutBadge, match.statut === 'En cours' && styles.statutLive]}>
-              <Text style={styles.statutText}>{match.statut}</Text>
-            </View>
+            <Text style={styles.scoreVs}>vs</Text>
           </View>
           <View style={styles.teamBlock}>
-            <Text style={styles.teamName}>{match.exterieur}</Text>
-            <Text style={styles.teamLabel}>ExtÃ©rieur</Text>
+            <Text style={styles.teamName}>{match.equipeB_nom}</Text>
+            <Text style={styles.teamLabel}>Équipe B</Text>
           </View>
         </View>
 
         {/* Info rows */}
         <View style={styles.infoCard}>
           <InfoRow label="Date" value={formattedDate} />
-          <InfoRow label="Lieu" value={match.lieu} />
-          <InfoRow label="RÃ©gion" value={match.region} />
-          <InfoRow label="DÃ©partement" value={match.departement} />
+          <InfoRow label="Région" value={match.region} />
+          <InfoRow label="Département" value={match.departement} />
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -99,30 +102,27 @@ function InfoRow({ label, value }: { label: string; value: string }) {
   );
 }
 
-const ACCENT = '#E63946';
-
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#F5F5F5' },
+  container: { flex: 1, backgroundColor: theme.colors.background },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  errorText: { color: '#999', fontSize: 16 },
-  content: { padding: 16 },
-  badgeRow: { flexDirection: 'row', gap: 8, marginBottom: 16 },
+  errorText: { color: theme.colors.textMuted, fontSize: 16 },
+  content: { padding: theme.spacing.lg },
+  badgeRow: { flexDirection: 'row', gap: 8, marginBottom: theme.spacing.lg },
   badge: {
-    backgroundColor: ACCENT,
-    borderRadius: 12,
+    borderRadius: theme.borderRadius.sm,
     paddingHorizontal: 12,
     paddingVertical: 4,
   },
   badgeSecondary: { backgroundColor: '#555' },
-  badgeText: { color: '#fff', fontSize: 12, fontWeight: '600' },
+  badgeText: { color: theme.colors.white, fontSize: 12, fontWeight: '600' },
   scoreCard: {
-    backgroundColor: '#fff',
-    borderRadius: 16,
+    backgroundColor: theme.colors.white,
+    borderRadius: theme.borderRadius.lg,
     padding: 20,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 16,
+    marginBottom: theme.spacing.lg,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.08,
@@ -130,23 +130,20 @@ const styles = StyleSheet.create({
     elevation: 3,
   },
   teamBlock: { flex: 1, alignItems: 'center' },
-  teamName: { fontSize: 15, fontWeight: '700', color: '#1a1a1a', textAlign: 'center', marginBottom: 4 },
-  teamLabel: { fontSize: 11, color: '#999' },
-  scoreBlock: { alignItems: 'center', paddingHorizontal: 8 },
-  scoreBig: { fontSize: 28, fontWeight: '800', color: '#1a1a1a', marginBottom: 6 },
-  scoreVs: { fontSize: 20, fontWeight: '700', color: '#ccc', marginBottom: 6 },
-  statutBadge: {
-    backgroundColor: '#eee',
-    borderRadius: 8,
-    paddingHorizontal: 8,
-    paddingVertical: 2,
+  teamName: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: theme.colors.text,
+    textAlign: 'center',
+    marginBottom: 4,
   },
-  statutLive: { backgroundColor: '#ff3b30' },
-  statutText: { fontSize: 11, color: '#fff', fontWeight: '600' },
+  teamLabel: { fontSize: 11, color: theme.colors.textMuted },
+  scoreBlock: { alignItems: 'center', paddingHorizontal: 8 },
+  scoreVs: { fontSize: 20, fontWeight: '700', color: '#ccc' },
   infoCard: {
-    backgroundColor: '#fff',
-    borderRadius: 16,
-    padding: 16,
+    backgroundColor: theme.colors.white,
+    borderRadius: theme.borderRadius.lg,
+    padding: theme.spacing.lg,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.06,
@@ -160,6 +157,12 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: '#f0f0f0',
   },
-  infoLabel: { fontSize: 13, color: '#888', fontWeight: '500' },
-  infoValue: { fontSize: 13, color: '#1a1a1a', fontWeight: '500', flex: 1, textAlign: 'right' },
+  infoLabel: { fontSize: 13, color: theme.colors.textSecondary, fontWeight: '500' },
+  infoValue: {
+    fontSize: 13,
+    color: theme.colors.text,
+    fontWeight: '500',
+    flex: 1,
+    textAlign: 'right',
+  },
 });
