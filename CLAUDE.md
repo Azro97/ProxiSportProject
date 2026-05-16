@@ -22,17 +22,17 @@ There is **no auth, no signup, no user profile** in the consumer app. Admins ent
 
 | Layer | Choice |
 |---|---|
-| Framework | **React Native + Expo (managed workflow)** |
+| Framework | **React Native (bare workflow, no Expo)** |
 | Language | **TypeScript** (strict mode) |
-| Navigation | `@react-navigation/native` + bottom tabs |
-| Maps | `react-native-maps` (Expo config plugin) |
-| Geolocation | `expo-location` |
-| Backend | **Firebase Firestore** (read-only from the app) |
+| Navigation | `@react-navigation/native` + bottom tabs + native stack |
+| Maps | `react-native-maps` |
+| Geolocation | `@react-native-community/geolocation` + `PermissionsAndroid` (Android) |
+| Backend | **Firebase Firestore** via `@react-native-firebase/firestore` (read-only from the app) |
 | State | **Zustand** (one store per concern — see §5) |
 | Data fetching | Direct Firestore SDK calls wrapped in services (no React Query for v1) |
 | Styling | StyleSheet + a small `theme.ts` for sport colors |
 
-> Do not introduce Redux, MobX, GraphQL, or a custom backend layer. If something seems to need it, flag it first.
+> Do not introduce Redux, MobX, GraphQL, expo-location, or a custom backend layer. If something seems to need it, flag it first.
 
 ---
 
@@ -40,16 +40,16 @@ There is **no auth, no signup, no user profile** in the consumer app. Admins ent
 
 ```
 src/
-├── app/                  # Navigation, root providers, app entry
-│   ├── App.tsx
-│   ├── navigation/
-│   │   ├── RootNavigator.tsx
-│   │   └── TabNavigator.tsx
+├── app/                  # Root providers
 │   └── providers/
+│       └── LocationProvider.tsx
+├── navigation/
+│   ├── RootNavigator.tsx
+│   └── BottomTabNavigator.tsx
 ├── screens/
 │   ├── carte/
 │   │   ├── CarteScreen.tsx
-│   │   ├── components/   # MarkerSport, TerrainModal, SportFloatingFilter
+│   │   ├── components/   # TerrainModal, SportFloatingFilter
 │   │   └── hooks/
 │   └── matchs/
 │       ├── MatchsScreen.tsx
@@ -129,43 +129,47 @@ Three top-level collections. Schemas mirror the conception doc exactly — **do 
 
 ---
 
-## 5. State management — filter cascade
+## 5. State management — filter logic
 
-The **Matchs screen** uses a strict cascading filter order. This is a product requirement, not a UX suggestion:
+The **Matchs screen** uses a cascading filter with **multi-select** on regions and divisions:
 
 ```
-1. Sport       →  unlocks Région
-2. Région      →  unlocks Division (Nationale / Régionale / Départementale)
-3. Division    →  unlocks Date (Aujourd'hui / Lun / Mar / … / picker JJ/MM)
-4. Date        →  triggers fetch
+1. Sport       →  single-select — unlocks Région row
+2. Région      →  multi-select  — unlocks Division row (resets divisions when toggled)
+3. Division    →  multi-select  — unlocks results
+4. Date        →  always visible, defaults to today, manually editable
 ```
 
-Each level is **disabled** in the UI until the previous one is set. Never show all filters active simultaneously.
+Fetch fires as soon as `sport` + at least one `region` + at least one `division` are set.  
+Date is **always set** — it defaults to today on init and on sport change.
 
 ### `filtresStore.ts` (Zustand) — shape
 ```ts
-type Filtres = {
+type Filtre = {
   sport: string | null;
-  region: string | null;
+  regions: string[];       // multi-select
   departement: string | null;
-  division: 'Nationale' | 'Régionale' | 'Départementale' | null;
-  date: Date | null;
-  jourSemaine: string | null;
+  divisions: Division[];   // multi-select
+  date: Date;              // never null — defaults to today
 };
 
-type FiltresStore = Filtres & {
-  setSport: (s: string) => void;          // resets region, division, date
-  setRegion: (r: string, d?: string) => void;  // resets division, date
-  setDivision: (d: Filtres['division']) => void;  // resets date
+type FiltresStore = Filtre & {
+  setSport: (s: string) => void;           // resets regions, divisions, date→today
+  toggleRegion: (r: string) => void;       // add/remove region, resets divisions
+  toggleDivision: (d: Division) => void;   // add/remove division
   setDate: (d: Date) => void;
   reset: () => void;
 };
 ```
 
-Setting a higher-level filter **must reset all lower-level filters** — this is the part that's easy to get wrong. Centralize that logic in the store, not in components.
+**Rules:**
+- `setSport` resets `regions`, `divisions`, and resets `date` to today.
+- `toggleRegion` resets `divisions` (region scope change invalidates division selection).
+- `date` is initialised to `today()` (midnight local time) — never `null`.
+- Do not add a `jourSemaine` field; it was removed.
 
 ### `locationStore.ts`
-Holds `{ lat, lng, status: 'idle' | 'granted' | 'denied' }`. Set once at app launch via `expo-location`. Carte screen reads from it; if denied, fall back to a default region centroid (do not block the app).
+Holds `{ lat, lng, status: 'idle' | 'granted' | 'denied' }`. Set once at app launch via `@react-native-community/geolocation`. Carte screen reads from it; if denied, fall back to Paris centroid (do not block the app).
 
 ---
 
@@ -188,8 +192,9 @@ grouperParDate(matchs: Match[]): Record<string, Match[]>
 ```
 
 **Query rules:**
-- Apply `where` clauses in this priority order: `sport`, `region`/`departement`, `division`, then a date range on `dateHeure`. This matches Firestore's composite index efficiency.
-- For "Aujourd'hui" / weekday filters, compute start-of-day and end-of-day in **local time**, then pass as Firestore `Timestamp`. Do not filter on the client after fetch.
+- Apply `where` clauses in this priority order: `sport`, `regions` (use `'in'` operator), `departement`, `divisions` (use `'in'` operator), then a date range on `dateHeure`.
+- `date` is always set — always apply start-of-day / end-of-day range, no null check needed.
+- For the mock path, use `Array.includes()` to filter against `regions[]` and `divisions[]`.
 - Geographic radius filtering on `terrains` is done client-side (Haversine in `utils/geo.ts`) — Firestore geoqueries are out of scope for v1.
 
 ---
@@ -197,16 +202,26 @@ grouperParDate(matchs: Match[]): Record<string, Match[]>
 ## 7. Screens — what each must do
 
 ### CarteScreen
-- Centers on user GPS (`locationStore`); fallback to a default if permission denied.
+- Centers on user GPS (`locationStore`); fallback to Paris centroid if permission denied.
 - Renders one `Marker` per terrain returned by `getTerrainsByLocation`.
 - Marker color = first sport in `terrain.sports[]` (use `theme.sportColors`).
 - Tapping a marker opens `TerrainModal` showing the terrain name + the matches at that terrain (`getMatchsByTerrain`).
-- Floating sport filter chips (Foot / Basket / Hand / Volley) filter visible markers — this filter is **independent** of the Matchs screen filter store (it's a local UI state on Carte).
+- Each match row in `TerrainModal` is tappable: closes the modal then navigates to `MatchDetail`.
+- Floating sport filter chips (Foot / Basket / Hand / Volley) filter visible markers — this filter is **independent** of the Matchs screen filter store (local UI state on Carte).
 
 ### MatchsScreen
-- Renders the 4 cascading filter rows from §5. Each row is disabled until the previous is set.
-- Once `date` is set, fetches via `getMatchs(filtres)`, groups via `grouperParDivision`, sorts each group by `dateHeure` ascending.
-- `MatchCard` displays: `equipeA_nom vs equipeB_nom`, time, terrain name + ville, division.
+- Row 1: Sport selector (single-select).
+- Row 2: Region chips (multi-select, visible after sport). Tapping a chip toggles it; toggling any chip resets divisions.
+- Row 3: Division chips (multi-select, visible after ≥1 region selected).
+- Row 4: Date chips (always visible, defaults to today, 7 upcoming days).
+- Fetch fires as soon as sport + ≥1 region + ≥1 division are set (date always has a value).
+- Results grouped via `grouperParDivision`, each group sorted by `dateHeure` ascending.
+- `MatchCard` is tappable → navigates to `MatchDetail` screen.
+
+### MatchDetailScreen
+- Receives `{ matchId }` from navigation params.
+- Loads match via `getMatchById`, shows teams, date, division, region, département.
+- All user-facing strings use correct French UTF-8 characters (é, è, à, ê, etc.) — never use placeholder `?` or mojibake.
 
 ---
 
@@ -253,8 +268,14 @@ If the user asks for any of these, confirm scope before scaffolding.
 # install
 npm install
 
-# run
-npx expo start
+# run (Android)
+npx react-native run-android
+
+# run (iOS)
+npx react-native run-ios
+
+# start Metro bundler
+npx react-native start
 
 # type-check
 npx tsc --noEmit
@@ -265,10 +286,87 @@ npm run lint
 
 ---
 
-## 12. Quick reference — the filter contract
+## 12. Environment setup (new machine — Windows)
+
+### Prerequisites (install once)
+
+| Tool | How |
+|---|---|
+| **Node.js LTS** | https://nodejs.org |
+| **Android Studio** | https://developer.android.com/studio |
+| **Java 17** (JDK) | `winget install Microsoft.OpenJDK.17` in PowerShell |
+| **Git** | https://git-scm.com |
+
+> ⚠️ Java 17 is **required**. Java 21 (bundled with Android Studio) breaks AGP 7.x (`jlink` crash). Do not use `C:\Program Files\Android\Android Studio\jbr` as `JAVA_HOME`.
+
+In **Android Studio SDK Manager**, verify these are installed:
+- Android SDK Platform **33**
+- Android SDK Build-Tools **33.0.0**
+- NDK (Side by side) **23.1.7779620**
+- CMake **3.22.1**
+
+### Set JAVA_HOME permanently (Windows)
+
+1. Search **"Edit system environment variables"** → Environment Variables
+2. Under **User variables** → New: `JAVA_HOME` = `C:\Program Files\Microsoft\jdk-17.0.19.10-hotspot` *(adjust if different)*
+3. Edit `Path` → Add `%JAVA_HOME%\bin`
+4. Restart your terminal
+
+### First-time project setup
+
+```powershell
+git clone https://github.com/Azro97/ProxiSportProject.git
+cd ProxiSportProject
+npm install
+```
+
+### Create `android/local.properties` (not in git — machine-specific)
+
+Create the file `android/local.properties` with your SDK path (replace `YourUsername`):
+
+```properties
+sdk.dir=C\:\\Users\\YourUsername\\AppData\\Local\\Android\\Sdk
+```
+
+### Create `android/app/google-services.json` (not in git — secret)
+
+Obtain the real file from the Firebase Console. For local dev without live Firebase, use this placeholder (mock data is used when `__DEV__ === true`):
+
+```json
+{
+  "project_info": { "project_number": "000000000000", "project_id": "proxisport-placeholder", "storage_bucket": "proxisport-placeholder.appspot.com" },
+  "client": [{ "client_info": { "mobilesdk_app_id": "1:000000000000:android:0000000000000000", "android_client_info": { "package_name": "com.PP" } }, "api_key": [{ "current_key": "placeholder" }], "services": { "appinvite_service": { "other_platform_oauth_client": [] } } }],
+  "configuration_version": "1"
+}
+```
+
+### Run the app
+
+Start an AVD in Android Studio → Device Manager, then:
+
+```powershell
+# Terminal 1 — Metro bundler
+npx react-native start
+
+# Terminal 2 — build & install on emulator
+npx react-native run-android
+```
+
+First build takes 5–10 minutes (downloads Gradle deps, Firebase BOM, etc.). Subsequent builds take ~30–60 seconds.
+
+---
+
+## 13. Known pending items (v1)
+
+- **Firebase production config**: All 3 services (`matchsService`, `terrainsService`, `equipesService`) use `USE_MOCK = __DEV__`. To switch to real Firestore, set `USE_MOCK = false` and replace `android/app/google-services.json` with the real Firebase file.
+- **`getRegions()` / `getDepartements()`**: Currently return hardcoded mock arrays. When `USE_MOCK` is false, these should fetch distinct values from Firestore (or be pre-seeded as a config collection).
+- **Firestore composite indexes**: The multi-field `'in'` queries on `regions` + `divisions` + `dateHeure` will require composite indexes in the Firebase console before going to production.
+- **`ClassementsScreen`**: Shows "Disponible prochainement" — out of scope for v1.
+
+---
 
 This is the single most violated rule, so it lives at the bottom for visibility:
 
-> **Setting filter level N resets all levels > N. The UI for levels > N is disabled until level N is set. The fetch only fires when all 4 levels (sport, region, division, date) are set.**
+> **`setSport` resets everything. `toggleRegion` resets divisions. `date` is never null. Fetch fires when sport + ≥1 region + ≥1 division are all set.**
 
 If a change to the Matchs screen seems to need an exception to this rule, stop and ask.

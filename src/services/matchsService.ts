@@ -26,17 +26,16 @@ export async function getMatchs(filtres: Filtre): Promise<Match[]> {
 
   let query: FSQuery = firestore().collection('matchs') as FSQuery;
 
-  if (filtres.sport)       query = query.where('sport', '==', filtres.sport);
-  if (filtres.region)      query = query.where('region', '==', filtres.region);
-  if (filtres.departement) query = query.where('departement', '==', filtres.departement);
-  if (filtres.division)    query = query.where('division', '==', filtres.division);
-  if (filtres.date) {
-    const start = startOfDay(filtres.date);
-    const end = endOfDay(filtres.date);
-    query = query
-      .where('dateHeure', '>=', firestore.Timestamp.fromDate(start))
-      .where('dateHeure', '<=', firestore.Timestamp.fromDate(end));
-  }
+  if (filtres.sport)               query = query.where('sport', '==', filtres.sport);
+  if (filtres.regions.length > 0)  query = query.where('region', 'in', filtres.regions);
+  if (filtres.departement)         query = query.where('departement', '==', filtres.departement);
+  if (filtres.divisions.length > 0) query = query.where('division', 'in', filtres.divisions);
+  // date is always set — filter by day range
+  const start = startOfDay(filtres.date);
+  const end = endOfDay(filtres.date);
+  query = query
+    .where('dateHeure', '>=', firestore.Timestamp.fromDate(start))
+    .where('dateHeure', '<=', firestore.Timestamp.fromDate(end));
 
   const snapshot = await query.get();
   return snapshot.docs.map((doc: FirebaseFirestoreTypes.QueryDocumentSnapshot) => {
@@ -51,11 +50,12 @@ export async function getMatchs(filtres: Filtre): Promise<Match[]> {
 
 function filterMockMatchs(filtres: Filtre): Match[] {
   let results = [...MOCK_MATCHES];
-  if (filtres.sport)       results = results.filter(m => m.sport === filtres.sport);
-  if (filtres.region)      results = results.filter(m => m.region === filtres.region);
-  if (filtres.departement) results = results.filter(m => m.departement === filtres.departement);
-  if (filtres.division)    results = results.filter(m => m.division === filtres.division);
-  if (filtres.date)        results = results.filter(m => isSameDay(m.dateHeure, filtres.date!));
+  if (filtres.sport)               results = results.filter(m => m.sport === filtres.sport);
+  if (filtres.regions.length > 0)  results = results.filter(m => filtres.regions.includes(m.region));
+  if (filtres.departement)         results = results.filter(m => m.departement === filtres.departement);
+  if (filtres.divisions.length > 0) results = results.filter(m => filtres.divisions.includes(m.division as any));
+  // date is always set
+  results = results.filter(m => isSameDay(m.dateHeure, filtres.date));
   return results;
 }
 

@@ -4,11 +4,16 @@
 
 import React from 'react';
 import { View, Text, StyleSheet, SectionList } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Match } from '../../../models/Match';
 import { Terrain } from '../../../models/Terrain';
+import { RootStackParamList } from '../../../types';
 import { grouperParDivision } from '../../../services/matchsService';
 import MatchCard from './MatchCard';
 import { theme } from '../../../theme';
+
+type Nav = NativeStackNavigationProp<RootStackParamList>;
 
 type Props = {
   matchs: Match[];
@@ -16,6 +21,7 @@ type Props = {
 };
 
 export default function MatchGroupList({ matchs, terrains }: Props) {
+  const navigation = useNavigation<Nav>();
   const grouped = grouperParDivision(matchs);
 
   const sections = Object.entries(grouped).map(([division, data]) => ({
@@ -41,6 +47,7 @@ export default function MatchGroupList({ matchs, terrains }: Props) {
             match={item}
             terrainNom={terrain?.nom}
             terrainVille={terrain?.ville}
+            onPress={() => navigation.navigate('MatchDetail', { matchId: item.id })}
           />
         );
       }}

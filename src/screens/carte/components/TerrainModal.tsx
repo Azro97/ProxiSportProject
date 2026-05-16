@@ -12,10 +12,15 @@ import {
   FlatList,
   ActivityIndicator,
 } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Terrain } from '../../../models/Terrain';
 import { Match } from '../../../models/Match';
+import { RootStackParamList } from '../../../types';
 import { getMatchsByTerrain } from '../../../services/matchsService';
 import { theme } from '../../../theme';
+
+type Nav = NativeStackNavigationProp<RootStackParamList>;
 
 type Props = {
   terrain: Terrain;
@@ -23,6 +28,7 @@ type Props = {
 };
 
 export default function TerrainModal({ terrain, onClose }: Props) {
+  const navigation = useNavigation<Nav>();
   const [matchs, setMatchs] = useState<Match[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -71,7 +77,14 @@ export default function TerrainModal({ terrain, onClose }: Props) {
               keyExtractor={m => m.id}
               showsVerticalScrollIndicator={false}
               renderItem={({ item }) => (
-                <View style={styles.matchRow}>
+                <TouchableOpacity
+                  style={styles.matchRow}
+                  activeOpacity={0.7}
+                  onPress={() => {
+                    onClose();
+                    navigation.navigate('MatchDetail', { matchId: item.id });
+                  }}
+                >
                   <View style={[styles.sportDot, { backgroundColor: theme.sportColors[item.sport] ?? '#888' }]} />
                   <View style={styles.matchInfo}>
                     <Text style={styles.matchTeams}>
@@ -89,7 +102,8 @@ export default function TerrainModal({ terrain, onClose }: Props) {
                       {item.division}
                     </Text>
                   </View>
-                </View>
+                  <Text style={styles.chevron}>›</Text>
+                </TouchableOpacity>
               )}
             />
           )}
@@ -144,4 +158,5 @@ const styles = StyleSheet.create({
   matchInfo: { flex: 1 },
   matchTeams: { fontSize: 14, fontWeight: '600', color: theme.colors.text },
   matchMeta: { fontSize: 12, color: theme.colors.textSecondary, marginTop: 2 },
+  chevron: { fontSize: 20, color: theme.colors.textMuted, alignSelf: 'center', marginLeft: theme.spacing.sm },
 });

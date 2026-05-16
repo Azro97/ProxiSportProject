@@ -1,6 +1,6 @@
 // src/screens/matchs/MatchsScreen.tsx
-// Cascade filters: Sport → Région → Division → Date → fetch.
-// Filter state lives in filtresStore (Zustand). See CLAUDE.md §5 and §12.
+// Filters: Sport (single) → Région (multi) → Division (multi) → Date (default: today).
+// Filter state lives in filtresStore (Zustand). See CLAUDE.md §5.
 
 import React, { useEffect, useState } from 'react';
 import {
@@ -29,16 +29,17 @@ const DIVISIONS: Division[] = ['Nationale', 'Régionale', 'Départementale'];
 
 export default function MatchsScreen() {
   const {
-    sport, region, departement, division, date,
-    setSport, setRegion, setDivision, setDate,
+    sport, regions, divisions, date,
+    setSport, toggleRegion, toggleDivision, setDate,
   } = useFiltresStore();
 
   const [matchs, setMatchs] = useState<Match[]>([]);
   const [terrains, setTerrains] = useState<Record<string, Terrain>>({});
   const [loading, setLoading] = useState(false);
 
-  // Fetch fires only when ALL 4 filters are set — see CLAUDE.md §12
-  const allSet = Boolean(sport && region && division && date);
+  // Fetch fires when sport + at least one region + at least one division are set.
+  // Date is always set (defaults to today).
+  const allSet = Boolean(sport && regions.length > 0 && divisions.length > 0);
 
   useEffect(() => {
     if (!allSet) {
@@ -46,10 +47,9 @@ export default function MatchsScreen() {
       return;
     }
     setLoading(true);
-    getMatchs({ sport, region, departement, division, date, jourSemaine: null })
+    getMatchs({ sport, regions, departement: null, divisions, date })
       .then(async results => {
         setMatchs(results);
-        // Batch-fetch terrain info for display in MatchCard (terrain_nom + ville)
         const uniqueIds = [...new Set(results.map(m => m.terrain_id))];
         const pairs = await Promise.all(
           uniqueIds.map(id => getTerrainById(id).then(t => [id, t] as const)),
@@ -60,25 +60,25 @@ export default function MatchsScreen() {
       })
       .finally(() => setLoading(false));
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sport, region, departement, division, date]);
+  }, [sport, regions, divisions, date]);
 
-  const regions = getRegions();
+  const allRegions = getRegions();
 
   return (
     <SafeAreaView style={styles.container}>
-      {/* Row 1 — Sport */}
+      {/* Row 1 — Sport (single select) */}
       <SportSelector selected={sport} onSelect={setSport} />
 
-      {/* Row 2 — Région (unlocked after sport) */}
+      {/* Row 2 — Région (multi-select, unlocked after sport) */}
       <GeoFilter
-        regions={regions}
-        selected={region}
-        onSelect={setRegion}
+        regions={allRegions}
+        selected={regions}
+        onToggle={toggleRegion}
         disabled={!sport}
       />
 
-      {/* Row 3 — Division (unlocked after région) */}
-      {region && (
+      {/* Row 3 — Division (multi-select, unlocked after at least one region) */}
+      {regions.length > 0 && (
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
@@ -86,12 +86,12 @@ export default function MatchsScreen() {
           contentContainerStyle={styles.filterContent}
         >
           {DIVISIONS.map(div => {
-            const isActive = division === div;
+            const isActive = divisions.includes(div);
             return (
               <TouchableOpacity
                 key={div}
                 style={[styles.chip, isActive && styles.chipActive]}
-                onPress={() => setDivision(div)}
+                onPress={() => toggleDivision(div)}
                 activeOpacity={0.8}
               >
                 <Text style={[styles.chipLabel, isActive && styles.chipLabelActive]}>{div}</Text>
@@ -101,8 +101,8 @@ export default function MatchsScreen() {
         </ScrollView>
       )}
 
-      {/* Row 4 — Date (unlocked after division) */}
-      <DateFilter selected={date} onSelect={setDate} disabled={!division} />
+      {/* Row 4 — Date (always visible, defaults to today) */}
+      <DateFilter selected={date} onSelect={setDate} />
 
       {/* Content area */}
       {loading ? (
@@ -112,11 +112,9 @@ export default function MatchsScreen() {
           <Text style={styles.placeholderText}>
             {!sport
               ? 'Sélectionnez un sport'
-              : !region
-              ? 'Sélectionnez une région'
-              : !division
-              ? 'Sélectionnez une division'
-              : 'Sélectionnez une date'}
+              : regions.length === 0
+              ? 'Sélectionnez au moins une région'
+              : 'Sélectionnez au moins une division'}
           </Text>
         </View>
       ) : matchs.length === 0 ? (

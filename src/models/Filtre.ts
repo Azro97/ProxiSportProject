@@ -4,9 +4,8 @@ export type Division = 'Nationale' | 'Régionale' | 'Départementale';
 
 export interface Filtre {
   sport: string | null;
-  region: string | null;
+  regions: string[];          // multi-select
   departement: string | null;
-  division: Division | null;
-  date: Date | null;
-  jourSemaine: string | null;
+  divisions: Division[];      // multi-select
+  date: Date;                 // always set — defaults to today
 }

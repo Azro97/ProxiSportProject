@@ -1,5 +1,5 @@
 // src/screens/matchs/components/GeoFilter.tsx
-// Row 2 of the cascading filter — region chips.
+// Row 2 of the filter — region chips with multi-select support.
 // Disabled (hidden) until a sport is selected.
 
 import React from 'react';
@@ -8,12 +8,12 @@ import { theme } from '../../../theme';
 
 type Props = {
   regions: string[];
-  selected: string | null;
-  onSelect: (region: string) => void;
+  selected: string[];           // multi-select: array of active regions
+  onToggle: (region: string) => void;
   disabled?: boolean;
 };
 
-export default function GeoFilter({ regions, selected, onSelect, disabled = false }: Props) {
+export default function GeoFilter({ regions, selected, onToggle, disabled = false }: Props) {
   if (disabled) return null;
 
   return (
@@ -24,12 +24,12 @@ export default function GeoFilter({ regions, selected, onSelect, disabled = fals
       contentContainerStyle={styles.content}
     >
       {regions.map(region => {
-        const isActive = selected === region;
+        const isActive = selected.includes(region);
         return (
           <TouchableOpacity
             key={region}
             style={[styles.chip, isActive && styles.chipActive]}
-            onPress={() => onSelect(region)}
+            onPress={() => onToggle(region)}
             activeOpacity={0.8}
           >
             <Text style={[styles.label, isActive && styles.labelActive]}>{region}</Text>

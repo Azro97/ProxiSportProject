@@ -1,40 +1,58 @@
 // src/stores/filtresStore.ts
-// Cascading filter store for the Matchs screen.
-// Rule: setting level N resets all levels > N. See CLAUDE.md §5 and §12.
+// Multi-select filter store for the Matchs screen.
+// Rule: setting Sport resets regions + divisions. Toggling regions resets divisions.
+// Date defaults to today and is always set. See CLAUDE.md §5.
 
 import { create } from 'zustand';
 import { Filtre, Division } from '../models/Filtre';
 
 type FiltresStore = Filtre & {
-  setSport: (s: string) => void;         // resets region, departement, division, date
-  setRegion: (r: string, d?: string) => void; // resets division, date
-  setDivision: (d: Division) => void;    // resets date
+  setSport: (s: string) => void;          // resets regions, divisions, date→today
+  toggleRegion: (r: string) => void;      // adds/removes region, resets divisions
+  toggleDivision: (d: Division) => void;  // adds/removes division
   setDate: (d: Date) => void;
   reset: () => void;
 };
 
+const today = (): Date => {
+  const d = new Date();
+  d.setHours(0, 0, 0, 0);
+  return d;
+};
+
 const initialState: Filtre = {
   sport: null,
-  region: null,
+  regions: [],
   departement: null,
-  division: null,
-  date: null,
-  jourSemaine: null,
+  divisions: [],
+  date: today(),
 };
 
 export const useFiltresStore = create<FiltresStore>(set => ({
   ...initialState,
 
   setSport: sport =>
-    set({ sport, region: null, departement: null, division: null, date: null, jourSemaine: null }),
+    set({ sport, regions: [], departement: null, divisions: [], date: today() }),
 
-  setRegion: (region, departement) =>
-    set({ region, departement: departement ?? null, division: null, date: null, jourSemaine: null }),
+  toggleRegion: region =>
+    set(state => {
+      const exists = state.regions.includes(region);
+      const regions = exists
+        ? state.regions.filter(r => r !== region)
+        : [...state.regions, region];
+      return { regions, divisions: [] }; // reset divisions when region selection changes
+    }),
 
-  setDivision: division =>
-    set({ division, date: null, jourSemaine: null }),
+  toggleDivision: division =>
+    set(state => {
+      const exists = state.divisions.includes(division);
+      const divisions = exists
+        ? state.divisions.filter(d => d !== division)
+        : [...state.divisions, division];
+      return { divisions };
+    }),
 
   setDate: date => set({ date }),
 
-  reset: () => set(initialState),
+  reset: () => set({ ...initialState, date: today() }),
 }));

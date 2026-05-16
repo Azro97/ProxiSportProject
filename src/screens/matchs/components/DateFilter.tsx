@@ -1,6 +1,6 @@
 // src/screens/matchs/components/DateFilter.tsx
-// Row 4 of the cascading filter — weekday date chips.
-// Disabled (hidden) until division is selected.
+// Row 4 of the filter — weekday date chips.
+// Always visible. Defaults to today (pre-selected from the store).
 
 import React from 'react';
 import { ScrollView, TouchableOpacity, Text, StyleSheet } from 'react-native';
@@ -8,14 +8,11 @@ import { getUpcomingWeekDays, isSameDay } from '../../../utils/date';
 import { theme } from '../../../theme';
 
 type Props = {
-  selected: Date | null;
+  selected: Date;                   // always a Date — defaults to today
   onSelect: (date: Date) => void;
-  disabled?: boolean;
 };
 
-export default function DateFilter({ selected, onSelect, disabled = false }: Props) {
-  if (disabled) return null;
-
+export default function DateFilter({ selected, onSelect }: Props) {
   const weekDays = getUpcomingWeekDays();
 
   return (

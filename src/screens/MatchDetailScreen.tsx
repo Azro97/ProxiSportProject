@@ -71,22 +71,22 @@ export default function MatchDetailScreen({ route }: Props) {
         <View style={styles.scoreCard}>
           <View style={styles.teamBlock}>
             <Text style={styles.teamName}>{match.equipeA_nom}</Text>
-            <Text style={styles.teamLabel}>Équipe A</Text>
+            <Text style={styles.teamLabel}>Ã‰quipe A</Text>
           </View>
           <View style={styles.scoreBlock}>
             <Text style={styles.scoreVs}>vs</Text>
           </View>
           <View style={styles.teamBlock}>
             <Text style={styles.teamName}>{match.equipeB_nom}</Text>
-            <Text style={styles.teamLabel}>Équipe B</Text>
+            <Text style={styles.teamLabel}>Ã‰quipe B</Text>
           </View>
         </View>
 
         {/* Info rows */}
         <View style={styles.infoCard}>
           <InfoRow label="Date" value={formattedDate} />
-          <InfoRow label="Région" value={match.region} />
-          <InfoRow label="Département" value={match.departement} />
+          <InfoRow label="RÃ©gion" value={match.region} />
+          <InfoRow label="DÃ©partement" value={match.departement} />
         </View>
       </ScrollView>
     </SafeAreaView>
