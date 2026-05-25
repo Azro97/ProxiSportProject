@@ -7,5 +7,4 @@ export interface Terrain {
   ville: string;
   lat: number;
   lng: number;
-  sports: string[]; // e.g. ["foot", "basket"]
 }

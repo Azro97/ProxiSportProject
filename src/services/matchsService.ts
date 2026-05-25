@@ -3,7 +3,7 @@
 import { Match } from '../models/Match';
 import { Filtre } from '../models/Filtre';
 import { startOfDay, endOfDay, isSameDay } from '../utils/date';
-import { MOCK_MATCHES, MOCK_REGIONS, MOCK_DEPARTEMENTS } from './mockData';
+import { MOCK_MATCHES, MOCK_REGIONS, MOCK_DEPARTEMENTS, getFreshMockMatches } from './mockData';
 import type { FirebaseFirestoreTypes } from '@react-native-firebase/firestore';
 
 // TODO: set to false and configure google-services.json to use real Firestore
@@ -30,12 +30,14 @@ export async function getMatchs(filtres: Filtre): Promise<Match[]> {
   if (filtres.regions.length > 0)  query = query.where('region', 'in', filtres.regions);
   if (filtres.departement)         query = query.where('departement', '==', filtres.departement);
   if (filtres.divisions.length > 0) query = query.where('division', 'in', filtres.divisions);
-  // date is always set — filter by day range
-  const start = startOfDay(filtres.date);
-  const end = endOfDay(filtres.date);
-  query = query
-    .where('dateHeure', '>=', firestore.Timestamp.fromDate(start))
-    .where('dateHeure', '<=', firestore.Timestamp.fromDate(end));
+  // date null = all dates; otherwise filter by day range
+  if (filtres.date) {
+    const start = startOfDay(filtres.date);
+    const end = endOfDay(filtres.date);
+    query = query
+      .where('dateHeure', '>=', firestore.Timestamp.fromDate(start))
+      .where('dateHeure', '<=', firestore.Timestamp.fromDate(end));
+  }
 
   const snapshot = await query.get();
   return snapshot.docs.map((doc: FirebaseFirestoreTypes.QueryDocumentSnapshot) => {
@@ -49,19 +51,19 @@ export async function getMatchs(filtres: Filtre): Promise<Match[]> {
 }
 
 function filterMockMatchs(filtres: Filtre): Match[] {
-  let results = [...MOCK_MATCHES];
+  let results = getFreshMockMatches();
   if (filtres.sport)               results = results.filter(m => m.sport === filtres.sport);
   if (filtres.regions.length > 0)  results = results.filter(m => filtres.regions.includes(m.region));
   if (filtres.departement)         results = results.filter(m => m.departement === filtres.departement);
   if (filtres.divisions.length > 0) results = results.filter(m => filtres.divisions.includes(m.division as any));
-  // date is always set
-  results = results.filter(m => isSameDay(m.dateHeure, filtres.date));
+  // date null = all dates
+  if (filtres.date) results = results.filter(m => isSameDay(m.dateHeure, filtres.date!));
   return results;
 }
 
 export async function getMatchsByTerrain(terrainId: string): Promise<Match[]> {
   if (USE_MOCK) {
-    return MOCK_MATCHES
+    return getFreshMockMatches()
       .filter(m => m.terrain_id === terrainId)
       .sort((a, b) => a.dateHeure.getTime() - b.dateHeure.getTime());
   }
@@ -81,6 +83,23 @@ export async function getMatchsByTerrain(terrainId: string): Promise<Match[]> {
       dateHeure: (data.dateHeure as { toDate: () => Date }).toDate(),
     } as Match;
   });
+}
+
+/** Returns the set of terrain IDs that have at least one match for the given sport. */
+export async function getTerrainIdsForSport(sport: string): Promise<Set<string>> {
+  if (USE_MOCK) {
+    const ids = getFreshMockMatches()
+      .filter(m => m.sport === sport)
+      .map(m => m.terrain_id);
+    return new Set(ids);
+  }
+
+  const firestore = (await import('@react-native-firebase/firestore')).default;
+  const snapshot = await firestore()
+    .collection('matchs')
+    .where('sport', '==', sport)
+    .get();
+  return new Set(snapshot.docs.map(doc => doc.data().terrain_id as string));
 }
 
 export async function getMatchById(id: string): Promise<Match | null> {

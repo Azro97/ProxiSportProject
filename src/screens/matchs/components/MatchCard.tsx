@@ -1,12 +1,14 @@
 // src/screens/matchs/components/MatchCard.tsx
 // Single match card used in MatchGroupList.
-// Shows equipeA_nom vs equipeB_nom, time, terrain info, division.
-// Left accent bar color matches the sport.
+// Shows equipeA_nom vs equipeB_nom, time, terrain info.
+// Dark card with sport-colored left accent bar.
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { ChevronRight } from 'lucide-react-native';
 import { Match } from '../../../models/Match';
-import { theme } from '../../../theme';
+import { sportColors, type ColorPalette } from '../../../theme';
+import { useColors } from '../../../hooks/useColors';
 
 type Props = {
   match: Match;
@@ -16,7 +18,9 @@ type Props = {
 };
 
 export default function MatchCard({ match, terrainNom, terrainVille, onPress }: Props) {
-  const sportColor = theme.sportColors[match.sport] ?? theme.colors.primary;
+  const colors = useColors();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
+  const accent = sportColors[match.sport] ?? colors.textPrimary;
   const time = match.dateHeure.toLocaleTimeString('fr-FR', {
     hour: '2-digit',
     minute: '2-digit',
@@ -24,50 +28,67 @@ export default function MatchCard({ match, terrainNom, terrainVille, onPress }: 
   const lieu = [terrainNom, terrainVille].filter(Boolean).join(', ');
 
   return (
-    <TouchableOpacity style={styles.card} onPress={onPress} activeOpacity={0.8}>
-      <View style={[styles.accent, { backgroundColor: sportColor }]} />
+    <TouchableOpacity style={styles.card} onPress={onPress} activeOpacity={0.75}>
+      <View style={[styles.accent, { backgroundColor: accent }]} />
       <View style={styles.body}>
         <View style={styles.topRow}>
-          <Text style={styles.division}>{match.division}</Text>
           <Text style={styles.time}>{time}</Text>
+          <ChevronRight size={14} color={colors.textMuted} strokeWidth={2} />
         </View>
         <Text style={styles.teams}>
-          {match.equipeA_nom} vs {match.equipeB_nom}
+          {match.equipeA_nom}
         </Text>
-        {lieu.length > 0 && <Text style={styles.lieu}>{lieu}</Text>}
+        <Text style={styles.vs}>vs</Text>
+        <Text style={styles.teams}>{match.equipeB_nom}</Text>
+        {lieu.length > 0 && (
+          <Text style={styles.lieu}>{lieu}</Text>
+        )}
       </View>
     </TouchableOpacity>
   );
 }
 
-const styles = StyleSheet.create({
+function makeStyles(colors: ColorPalette) {
+  return StyleSheet.create({
   card: {
     flexDirection: 'row',
-    backgroundColor: theme.colors.white,
-    borderRadius: theme.borderRadius.md,
-    marginBottom: theme.spacing.sm,
+    backgroundColor: colors.bgCard,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.borderFaint,
     overflow: 'hidden',
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.08,
-    shadowRadius: 4,
   },
-  accent: { width: 4 },
-  body: { flex: 1, padding: theme.spacing.md },
+  accent: { width: 3 },
+  body: { flex: 1, paddingHorizontal: 14, paddingVertical: 12 },
   topRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 4,
+    alignItems: 'center',
+    marginBottom: 6,
   },
-  division: {
+  time: {
     fontSize: 11,
     fontWeight: '700',
-    color: theme.colors.textSecondary,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
+    color: colors.textMuted,
+    letterSpacing: 0.6,
   },
-  time: { fontSize: 12, color: theme.colors.textSecondary },
-  teams: { fontSize: 14, fontWeight: '700', color: theme.colors.text, marginBottom: 4 },
-  lieu: { fontSize: 12, color: theme.colors.textMuted },
-});
+  teams: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: colors.textPrimary,
+    lineHeight: 18,
+  },
+  vs: {
+    fontSize: 10,
+    fontWeight: '600',
+    color: colors.textMuted,
+    letterSpacing: 1,
+    textTransform: 'uppercase',
+    marginVertical: 2,
+  },
+  lieu: {
+    fontSize: 11,
+    color: colors.textTertiary,
+    marginTop: 6,
+  },
+  });
+}

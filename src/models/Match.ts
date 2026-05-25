@@ -1,4 +1,4 @@
-// src/models/Match.ts
+import { Division } from './Filtre';
 
 export interface Match {
   id: string;
@@ -9,7 +9,7 @@ export interface Match {
   equipeB_nom: string;     // denormalized
   terrain_id: string;
   dateHeure: Date;         // converted from Firestore Timestamp in services
-  division: 'Nationale' | 'Régionale' | 'Départementale';
+  division: Division;
   region: string;
   departement: string;
 }

@@ -17,7 +17,7 @@ export default function RootNavigator() {
         <Stack.Screen
           name="MatchDetail"
           component={MatchDetailScreen}
-          options={{ headerShown: true, title: 'Détail du match' }}
+          options={{ headerShown: false }}
         />
       </Stack.Navigator>
     </NavigationContainer>

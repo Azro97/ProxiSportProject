@@ -2,34 +2,42 @@
 
 import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { Text } from 'react-native';
+import { Map, List, Trophy } from 'lucide-react-native';
 import { BottomTabParamList } from '../types';
 import CarteScreen from '../screens/carte/CarteScreen';
 import MatchsScreen from '../screens/matchs/MatchsScreen';
 import ClassementsScreen from '../screens/ClassementsScreen';
-import { theme } from '../theme';
+import { useColors } from '../hooks/useColors';
 
 const Tab = createBottomTabNavigator<BottomTabParamList>();
 
 export default function BottomTabNavigator() {
+  const colors = useColors();
   return (
     <Tab.Navigator
       screenOptions={({ route }) => ({
-        tabBarActiveTintColor: theme.colors.primary,
-        tabBarInactiveTintColor: '#888',
+        tabBarActiveTintColor: colors.textSecondary,
+        tabBarInactiveTintColor: colors.textMuted,
         tabBarStyle: {
-          backgroundColor: theme.colors.white,
+          backgroundColor: colors.bgCard,
           borderTopWidth: 1,
-          borderTopColor: theme.colors.border,
+          borderTopColor: colors.borderHairline,
+          elevation: 0,
+          height: 60,
+          paddingBottom: 8,
+        },
+        tabBarLabelStyle: {
+          fontSize: 10,
+          letterSpacing: 0.5,
+          fontWeight: '600',
         },
         headerShown: false,
         tabBarIcon: ({ color, size }) => {
-          const icons: Record<string, string> = {
-            Carte: '🗺️',
-            Matchs: '⚽',
-            Classements: '🏆',
-          };
-          return <Text style={{ fontSize: size - 2 }}>{icons[route.name]}</Text>;
+          const iconProps = { color, size: size - 2, strokeWidth: 1.8 };
+          if (route.name === 'Carte')       return <Map {...iconProps} />;
+          if (route.name === 'Matchs')      return <List {...iconProps} />;
+          if (route.name === 'Classements') return <Trophy {...iconProps} />;
+          return null;
         },
       })}
     >

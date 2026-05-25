@@ -1,15 +1,16 @@
 // src/screens/matchs/components/SportSelector.tsx
 // Row 1 of the cascading filter — sport chips with sport-specific colors.
 
-import React from 'react';
-import { ScrollView, TouchableOpacity, Text, StyleSheet } from 'react-native';
-import { theme } from '../../../theme';
+import React, { useMemo } from 'react';
+import { ScrollView, TouchableOpacity, Text, StyleSheet, View } from 'react-native';
+import { sportColors, sportColorsSoft, type ColorPalette } from '../../../theme';
+import { useColors } from '../../../hooks/useColors';
 
 const SPORTS = [
-  { key: 'foot',   label: 'Football' },
-  { key: 'basket', label: 'Basketball' },
-  { key: 'hand',   label: 'Handball' },
-  { key: 'volley', label: 'Volleyball' },
+  { key: 'foot',   label: 'Football',   emoji: '⚽' },
+  { key: 'basket', label: 'Basketball', emoji: '🏀' },
+  { key: 'hand',   label: 'Handball',   emoji: '🤾' },
+  { key: 'volley', label: 'Volleyball', emoji: '🏐' },
 ];
 
 type Props = {
@@ -18,42 +19,70 @@ type Props = {
 };
 
 export default function SportSelector({ selected, onSelect }: Props) {
+  const colors = useColors();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   return (
-    <ScrollView
-      horizontal
-      showsHorizontalScrollIndicator={false}
-      style={styles.row}
-      contentContainerStyle={styles.content}
-    >
-      {SPORTS.map(s => {
-        const isActive = selected === s.key;
-        const color = theme.sportColors[s.key];
-        return (
-          <TouchableOpacity
-            key={s.key}
-            style={[styles.chip, { borderColor: color }, isActive && { backgroundColor: color }]}
-            onPress={() => onSelect(s.key)}
-            activeOpacity={0.8}
-          >
-            <Text style={[styles.label, isActive && styles.labelActive]}>{s.label}</Text>
-          </TouchableOpacity>
-        );
-      })}
-    </ScrollView>
+    <View style={styles.wrapper}>
+      <Text style={styles.stepLabel}>1 · CHOISIR LE SPORT</Text>
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.content}
+      >
+        {SPORTS.map(s => {
+          const isActive = selected === s.key;
+          const accent = sportColors[s.key];
+          const soft = sportColorsSoft[s.key];
+          return (
+            <TouchableOpacity
+              key={s.key}
+              style={[
+                styles.chip,
+                { borderColor: isActive ? accent : colors.borderSubtle },
+                isActive && { backgroundColor: soft },
+              ]}
+              onPress={() => onSelect(s.key)}
+              activeOpacity={0.7}
+            >
+              <Text style={styles.emoji}>{s.emoji}</Text>
+              <Text style={[styles.label, isActive && { color: accent }]}>{s.label}</Text>
+            </TouchableOpacity>
+          );
+        })}
+      </ScrollView>
+    </View>
   );
 }
 
-const styles = StyleSheet.create({
-  row: { maxHeight: 54, backgroundColor: theme.colors.white },
-  content: { paddingHorizontal: theme.spacing.md, paddingVertical: 9, alignItems: 'center' },
-  chip: {
-    paddingHorizontal: 16,
-    paddingVertical: 7,
-    borderRadius: theme.borderRadius.full,
-    backgroundColor: theme.colors.white,
-    borderWidth: 2,
-    marginRight: theme.spacing.sm,
+function makeStyles(colors: ColorPalette) {
+  return StyleSheet.create({
+  wrapper: {
+    paddingTop: 14,
+    paddingBottom: 4,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.borderFaint,
   },
-  label: { fontSize: 13, fontWeight: '600', color: theme.colors.text },
-  labelActive: { color: theme.colors.white },
-});
+  stepLabel: {
+    fontSize: 9.5,
+    fontWeight: '700',
+    letterSpacing: 1.3,
+    color: colors.textTertiary,
+    textTransform: 'uppercase',
+    paddingHorizontal: 20,
+    marginBottom: 10,
+  },
+  content: { paddingHorizontal: 16, paddingBottom: 12, gap: 8, flexDirection: 'row' },
+  chip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 999,
+    borderWidth: 1,
+    backgroundColor: colors.bgInput,
+  },
+  emoji: { fontSize: 14 },
+  label: { fontSize: 13, fontWeight: '600', color: colors.textSecondary },
+  });
+}

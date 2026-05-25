@@ -63,7 +63,10 @@ src/
 │   └── equipesService.ts
 ├── stores/               # Zustand stores — see §5
 │   ├── filtresStore.ts
-│   └── locationStore.ts
+│   ├── locationStore.ts
+│   └── themeStore.ts     # dark/light mode toggle (added session 2025-05-25)
+├── hooks/                # Shared custom hooks
+│   └── useColors.ts      # returns active ColorPalette from themeStore
 ├── models/               # TS types mirroring Firestore docs
 │   ├── Terrain.ts
 │   ├── Equipe.ts
@@ -204,10 +207,12 @@ grouperParDate(matchs: Match[]): Record<string, Match[]>
 ### CarteScreen
 - Centers on user GPS (`locationStore`); fallback to Paris centroid if permission denied.
 - Renders one `Marker` per terrain returned by `getTerrainsByLocation`.
-- Marker color = first sport in `terrain.sports[]` (use `theme.sportColors`).
+- Marker color = active sport filter chip (`sportColors[sportFilter]`); grey (`colors.textMuted`) when no filter. Marker key is `${terrain.id}-${sportFilter ?? 'all'}` to force unmount/remount on sport change (react-native-maps doesn't re-render on prop-only changes alone).
 - Tapping a marker opens `TerrainModal` showing the terrain name + the matches at that terrain (`getMatchsByTerrain`).
 - Each match row in `TerrainModal` is tappable: closes the modal then navigates to `MatchDetail`.
 - Floating sport filter chips (Foot / Basket / Hand / Volley) filter visible markers — this filter is **independent** of the Matchs screen filter store (local UI state on Carte).
+
+> ⚠️ `terrain.sports` has been removed from the `Terrain` model. Sport badges in `TerrainModal` are derived from the actual matches at that terrain (`[...new Set(matchs.map(m => m.sport))]`). Do not re-add `terrain.sports`.
 
 ### MatchsScreen
 - Row 1: Sport selector (single-select).
@@ -365,8 +370,127 @@ First build takes 5–10 minutes (downloads Gradle deps, Firebase BOM, etc.). Su
 
 ---
 
+## 14. Pre-launch upgrade roadmap
+
+The app currently runs on **React Native 0.72.7** which is end-of-life. Several packages were **intentionally downgraded** to work around RN 0.72 compatibility issues. Before App Store / Play Store submission, the following upgrades are required:
+
+### Priority 1 — React Native upgrade (blocks everything else)
+
+Upgrade to **React Native 0.76+** (New Architecture stable). This is a ~1–2 day migration but unlocks all the package upgrades below.
+
+```
+react-native: 0.72.7 → 0.76.x or later
+react: 18.2.0 → 18.3.x
+```
+
+Resources: https://reactnative.dev/docs/upgrading
+
+### Priority 2 — Package upgrades (unblocked after RN upgrade)
+
+| Package | Current (forced) | Target | Reason downgraded |
+|---|---|---|---|
+| `react-native-maps` | 1.14.0 | 1.20.x | 1.18+ uses `UIBlockViewResolver` (RN 0.73+ API) |
+| `react-native-screens` | 3.22.1 | 4.x | 3.37+ uses `BaseReactPackage` (RN 0.73+ API) |
+| `react-native-safe-area-context` | 4.7.4 | 5.x | Downgraded alongside screens |
+| `@react-native-firebase/app` | 18.7.3 | 21.x | Older Firebase SDK |
+| `@react-native-firebase/firestore` | 18.7.3 | 21.x | Older Firebase SDK |
+| `typescript` | 5.0.4 | 5.8.x | Minor — no breaking changes expected |
+
+### Priority 3 — Android build cleanup (after RN upgrade)
+
+Once on RN 0.76+, the following workarounds in `android/build.gradle` can be removed:
+- The `subprojects` block forcing `jvmTarget = "11"` (handled natively by newer AGP)
+- The explicit `kotlin-gradle-plugin:1.9.0` classpath entry
+- Gradle can be upgraded from 8.5 → 8.10+
+
+### Priority 4 — iOS support
+
+iOS has not been tested or configured. Before iOS launch:
+- Add `ios/GoogleService-Info.plist` from Firebase Console
+- Run `npx pod-install` inside `ios/`
+- Test on Xcode simulator — **requires macOS** (Xcode cannot run on Windows; no workaround exists)
+  - Alternatives if you don't own a Mac:
+    - **Cloud Mac**: MacStadium / MacinCloud — rent a remote Mac for builds
+    - **GitHub Actions**: use a `macos-latest` runner to build the IPA in CI
+    - **EAS Build** (`eas build --platform ios`): Expo's cloud Mac servers build for you (requires migrating to EAS workflow)
+- `@react-native-community/geolocation` iOS permission strings must be added to `Info.plist`
+
+---
+
 This is the single most violated rule, so it lives at the bottom for visibility:
 
 > **`setSport` resets everything. `toggleRegion` resets divisions. `date` is never null. Fetch fires when sport + ≥1 region + ≥1 division are all set.**
 
 If a change to the Matchs screen seems to need an exception to this rule, stop and ask.
+
+---
+
+## 15. Changelog — session history
+
+### Session: 2026-05-25 — Light mode + Dark mode toggle
+
+#### 1. Removed `terrain.sports` field
+- **`src/models/Terrain.ts`** — removed `sports: string[]` field. Terrain is now pure location data (`id, nom, adresse, ville, lat, lng`).
+- **`src/services/mockData.ts`** — removed all `sports: [...]` arrays from every terrain object (21 terrains).
+- **`src/screens/carte/components/TerrainModal.tsx`** — sport badges now derived from `[...new Set(matchs.map(m => m.sport))]` (actual match data) instead of `terrain.sports`.
+- **Rationale**: `terrain.sports` could drift out of sync with actual match data (a match at a gymnasium for a sport not listed in `terrain.sports`). Removing it ensures sports shown on a terrain are always accurate.
+
+#### 2. Map pin colors per sport filter
+- **`src/screens/carte/CarteScreen.tsx`** — `<Marker>` key changed to compound `${terrain.id}-${sportFilter ?? 'all'}` to force unmount/remount on sport change (react-native-maps doesn't re-render on prop-only changes).
+- `pinColor` now uses `sportColors[sportFilter]` when a filter is active, `colors.textMuted` (grey) when showing all.
+
+#### 3. MatchDetailScreen full redesign
+- **`src/screens/MatchDetailScreen.tsx`** — complete UI overhaul:
+  - Custom back button (no native header — `headerShown: false` in RootNavigator).
+  - Hero section: sport-colored top strip + sport chip + division pill + VS block with team names.
+  - Info cards section: Date & heure, Terrain (fetched via `getTerrainById`), Localisation, Compétition.
+  - Uses `useSafeAreaInsets` for safe area padding.
+- **`src/navigation/RootNavigator.tsx`** — set `headerShown: false` for MatchDetail route.
+
+#### 4. Map overlays switched to white/light style
+- Dark map style (`customMapStyle`) was attempted but silently ignored on Android without a Maps Styling-enabled API key. Feature was permanently rolled back.
+- **`src/screens/carte/CarteScreen.tsx`** — header card, FAB now use white bg + grey borders + elevation shadows for visibility on the standard (white) map.
+- **`src/screens/carte/components/SportFloatingFilter.tsx`** — chips use white bg (inactive) / solid sport color (active) with grey borders.
+
+#### 5. Full app light mode — theme.ts refactored
+- **`src/theme.ts`** — complete rewrite:
+  - Added `lightColors` (white/light palette) and `darkColors` (dark palette) as separate named exports.
+  - Added `ColorPalette` type (derived from `typeof lightColors`) for use in `makeStyles(colors: ColorPalette)` pattern.
+  - `colors` kept as a backward-compat alias pointing to `lightColors`.
+  - `sportColorsSoft` opacity reduced from `0.15` → `0.12` for light backgrounds.
+  - `radii` export: `{ chip:999, tag:10, input:12, card:16, sheet:24, cta:14 }`.
+  - Removed duplicate `radii` + `theme` declarations that caused Metro `SyntaxError: Identifier 'radii' has already been declared`.
+
+#### 6. Dark mode toggle — themeStore + useColors hook
+- **`src/stores/themeStore.ts`** *(new file)* — Zustand store with `isDark: boolean` + `toggleTheme()`.
+- **`src/hooks/useColors.ts`** *(new file)* — `useColors()` hook returns `darkColors` or `lightColors` based on `themeStore.isDark`.
+- All StyleSheets converted from `const styles = StyleSheet.create({...})` (static, module-level) to `function makeStyles(colors: ColorPalette)` (dynamic, called inside component with `useMemo`).
+
+#### 7. Files converted to dynamic theming (useColors hook)
+All files below now import `useColors()` instead of the static `colors` constant:
+
+| File | Change |
+|---|---|
+| `src/navigation/BottomTabNavigator.tsx` | Inline `tabBarStyle` using `colors.*`, removed static StyleSheet |
+| `src/screens/ClassementsScreen.tsx` | `makeStyles(colors)`, removed hardcoded hex strings |
+| `src/screens/matchs/MatchsScreen.tsx` | `makeStyles`, `makeEmptyStyles`, dynamic `StatusBar barStyle` |
+| `src/screens/MatchDetailScreen.tsx` | `makeStyles`, dynamic `StatusBar barStyle`, fixed rgba fallbacks |
+| `src/screens/carte/CarteScreen.tsx` | `makeStyles`, dynamic `StatusBar`, removed hardcoded hex strings |
+| `src/screens/carte/components/TerrainModal.tsx` | `makeStyles` |
+| `src/screens/carte/components/SportFloatingFilter.tsx` | `makeStyles`, removed hardcoded `#ffffff`/`#374151`/`#d1d5db` |
+| `src/screens/matchs/components/MatchCard.tsx` | `makeStyles` |
+| `src/screens/matchs/components/MatchGroupList.tsx` | `makeStyles` |
+| `src/screens/matchs/components/SportSelector.tsx` | `makeStyles` |
+| `src/screens/matchs/components/DateFilter.tsx` | `makeStyles`, replaced `require('../../../theme').sportColors` with direct import |
+| `src/screens/matchs/components/GeoFilter.tsx` | `makeStyles`, replaced `require('../../../theme').sportColors` with direct import |
+| `src/screens/matchs/components/AffinerFilter.tsx` | `makeStyles` |
+
+#### 8. Dark mode toggle button — Matchs screen header
+- **`src/screens/matchs/MatchsScreen.tsx`** — added a circular `TouchableOpacity` button in the top-right of the header.
+  - Shows **Moon** icon in light mode → tap to switch to dark.
+  - Shows **Sun** icon in dark mode → tap to switch to light.
+  - `StatusBar barStyle` switches between `"dark-content"` (light mode) and `"light-content"` (dark mode) everywhere.
+
+#### Architecture rule added
+- `makeStyles(colors: ColorPalette)` pattern is now the standard for all components. Never use module-level `StyleSheet.create` with `colors.*` tokens — colors are resolved at render time from the active theme.
+

@@ -2,7 +2,7 @@
 // Renders matches grouped by division (via grouperParDivision), each group
 // sorted by dateHeure ascending.
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import { View, Text, StyleSheet, SectionList } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -11,17 +11,25 @@ import { Terrain } from '../../../models/Terrain';
 import { RootStackParamList } from '../../../types';
 import { grouperParDivision } from '../../../services/matchsService';
 import MatchCard from './MatchCard';
-import { theme } from '../../../theme';
+import { sportColors, type ColorPalette } from '../../../theme';
+import { useColors } from '../../../hooks/useColors';
+import { useFiltresStore } from '../../../stores/filtresStore';
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
 
 type Props = {
   matchs: Match[];
   terrains: Record<string, Terrain>;
+  listHeader?: React.ReactElement | null;
+  listEmpty?: React.ReactElement | null;
 };
 
-export default function MatchGroupList({ matchs, terrains }: Props) {
+export default function MatchGroupList({ matchs, terrains, listHeader, listEmpty }: Props) {
   const navigation = useNavigation<Nav>();
+  const colors = useColors();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
+  const sport = useFiltresStore(s => s.sport);
+  const accent = sport ? sportColors[sport] : colors.textPrimary;
   const grouped = grouperParDivision(matchs);
 
   const sections = Object.entries(grouped).map(([division, data]) => ({
@@ -35,9 +43,14 @@ export default function MatchGroupList({ matchs, terrains }: Props) {
       keyExtractor={item => item.id}
       contentContainerStyle={styles.content}
       stickySectionHeadersEnabled={false}
-      renderSectionHeader={({ section: { title } }) => (
+      ListHeaderComponent={listHeader ?? undefined}
+      ListEmptyComponent={listEmpty ?? undefined}
+      renderSectionHeader={({ section: { title, data } }) => (
         <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>{title}</Text>
+          <Text style={[styles.sectionTitle, { color: accent }]}>{title.toUpperCase()}</Text>
+          <Text style={styles.sectionCount}>
+            {data.length} MATCH{data.length > 1 ? 'S' : ''}
+          </Text>
         </View>
       )}
       renderItem={({ item }) => {
@@ -51,23 +64,40 @@ export default function MatchGroupList({ matchs, terrains }: Props) {
           />
         );
       }}
+      renderSectionFooter={() => <View style={styles.sectionFooter} />}
     />
   );
 }
 
-const styles = StyleSheet.create({
-  content: { padding: theme.spacing.md },
+function makeStyles(colors: ColorPalette) {
+  return StyleSheet.create({
+  content: { paddingBottom: 32 },
   sectionHeader: {
-    paddingVertical: theme.spacing.xs,
-    paddingHorizontal: theme.spacing.sm,
-    marginTop: theme.spacing.sm,
-    marginBottom: theme.spacing.xs,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    marginTop: 8,
   },
   sectionTitle: {
     fontSize: 11,
     fontWeight: '700',
-    color: theme.colors.textSecondary,
-    textTransform: 'uppercase',
-    letterSpacing: 1,
+    letterSpacing: 1.2,
   },
-});
+  sectionCount: {
+    fontSize: 10,
+    fontWeight: '700',
+    letterSpacing: 0.8,
+    color: colors.textMuted,
+  },
+  sectionFooter: {
+    marginHorizontal: 16,
+    marginBottom: 4,
+    borderRadius: 16,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: colors.borderHairline,
+  },
+  });
+}
