@@ -1,4 +1,7 @@
+pluginManagement { includeBuild("../node_modules/@react-native/gradle-plugin") }
+plugins { id("com.facebook.react.settings") }
+extensions.configure(com.facebook.react.ReactSettingsExtension){ ex -> ex.autolinkLibrariesFromCommand() }
+// Top-level includeBuild enables composite-build substitution for buildscript classpath entries
+includeBuild("../node_modules/@react-native/gradle-plugin")
 rootProject.name = 'PP'
-apply from: file("../node_modules/@react-native-community/cli-platform-android/native_modules.gradle"); applyNativeModulesSettingsGradle(settings)
 include ':app'
-includeBuild('../node_modules/@react-native/gradle-plugin')

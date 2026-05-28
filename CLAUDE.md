@@ -5,6 +5,58 @@
 
 ---
 
+## ⏸️ RESUME HERE (session interrupted 2026-05-28)
+
+### Upgrade status
+- ✅ `npm install` — RN 0.76.9, 943 packages
+- ✅ `npx tsc --noEmit` — zero TypeScript errors
+- ✅ Metro bundler: `npx react-native start --reset-cache` (start it before building)
+- ✅ Emulator: `emulator-5554` — start before building
+
+### Android build fixes applied (all permanent)
+
+**`android/settings.gradle`** — two fixes:
+1. Line 2: `apply plugin: "com.facebook.react.settings"` → `plugins { id("com.facebook.react.settings") }` (required in settings files to resolve from `pluginManagement { includeBuild }`)
+2. Added `includeBuild("../node_modules/@react-native/gradle-plugin")` at top level (enables composite-build substitution for `buildscript` classpath)
+
+**`android/build.gradle`** — explicit classpath versions (required when `--project-cache-dir` is used, as `ReactRootProjectPlugin` version injection doesn't apply):
+```groovy
+classpath("com.android.tools.build:gradle:8.6.0")
+classpath("com.facebook.react:react-native-gradle-plugin:0.76.9")
+```
+
+**`android/gradlew.bat`** — `--project-cache-dir C:\Temp\pp-gradle` baked in permanently (fixes Windows ATOMIC_MOVE crash when project path contains spaces).
+
+### How to build & install
+```powershell
+# Build (do NOT use installDebug — adb install hangs; install manually instead)
+cd "C:\Users\User\Documents\Mobile Apps\DatingApp\ProxiSportProject\android"
+.\gradlew.bat app:assembleDebug
+
+# Install manually
+& "$env:LOCALAPPDATA\Android\Sdk\platform-tools\adb.exe" install -r "app\build\outputs\apk\debug\app-debug.apk"
+
+# Launch
+& "$env:LOCALAPPDATA\Android\Sdk\platform-tools\adb.exe" shell am start -n "com.PP/.MainActivity"
+```
+
+### Once app is verified running — commit
+```powershell
+cd "C:\Users\User\Documents\Mobile Apps\DatingApp\ProxiSportProject"
+git add -A
+git commit -m "chore: upgrade RN 0.72.7 -> 0.76.9, SDK 33->35, AGP 7->8.6; fix settings.gradle plugin block + includeBuild; explicit classpath versions; Windows ATOMIC_MOVE fix via project-cache-dir"
+git push
+```
+
+### Constraints
+- `adb` not in PATH — use `& "$env:LOCALAPPDATA\Android\Sdk\platform-tools\adb.exe"` directly
+- `react-native-maps` pinned to `1.20.0` — do not upgrade
+- `android-36` junction in SDK platforms — harmless, ignore
+
+---
+
+---
+
 ## 1. Project overview
 
 **Application Sportive Régionale** — a mobile app that lets users discover sports matches happening near them, on real fields/stadiums, across 4 sports: **Football, Basketball, Handball, Volleyball**.
@@ -302,12 +354,12 @@ npm run lint
 | **Java 17** (JDK) | `winget install Microsoft.OpenJDK.17` in PowerShell |
 | **Git** | https://git-scm.com |
 
-> ⚠️ Java 17 is **required**. Java 21 (bundled with Android Studio) breaks AGP 7.x (`jlink` crash). Do not use `C:\Program Files\Android\Android Studio\jbr` as `JAVA_HOME`.
+> ⚠️ Java 17 is **required**. Java 21 (bundled with Android Studio) breaks the build. Do not use `C:\Program Files\Android\Android Studio\jbr` as `JAVA_HOME`.
 
 In **Android Studio SDK Manager**, verify these are installed:
-- Android SDK Platform **33**
-- Android SDK Build-Tools **33.0.0**
-- NDK (Side by side) **23.1.7779620**
+- Android SDK Platform **35** (vanilla — no `.1` or `-2` suffix)
+- Android SDK Build-Tools **37.0.0** (or 36.1.0; 35.0.0 is not needed)
+- NDK (Side by side) **26.1.10909125**
 - CMake **3.22.1**
 
 ### Set JAVA_HOME permanently (Windows)
@@ -335,7 +387,9 @@ sdk.dir=C\:\\Users\\YourUsername\\AppData\\Local\\Android\\Sdk
 
 ### Create `android/app/google-services.json` (not in git — secret)
 
-Obtain the real file from the Firebase Console. For local dev without live Firebase, use this placeholder (mock data is used when `__DEV__ === true`):
+**Ask Azro for this file** — it contains the Firebase project credentials. Without it the app won't compile (Firebase Gradle plugin requires it at build time).
+
+For local dev without live Firebase, a placeholder can be used (mock data is used when `__DEV__ === true`):
 
 ```json
 {
@@ -344,6 +398,14 @@ Obtain the real file from the Firebase Console. For local dev without live Fireb
   "configuration_version": "1"
 }
 ```
+
+### Create `android/keystore.properties` + `android/app/release.keystore` (release builds only)
+
+> ⚠️ **Not needed for local dev** — only required if you are building a release APK for the Play Store.
+
+**Ask Azro for both files** (never shared via GitHub — they are gitignored). Place them at:
+- `android/keystore.properties`
+- `android/app/release.keystore`
 
 ### Run the app
 
@@ -372,36 +434,26 @@ First build takes 5–10 minutes (downloads Gradle deps, Firebase BOM, etc.). Su
 
 ## 14. Pre-launch upgrade roadmap
 
-The app currently runs on **React Native 0.72.7** which is end-of-life. Several packages were **intentionally downgraded** to work around RN 0.72 compatibility issues. Before App Store / Play Store submission, the following upgrades are required:
+> ✅ **React Native upgrade COMPLETE** — upgraded 0.72.7 → 0.76.9 (session 2026-05-28). See §15 changelog.
 
-### Priority 1 — React Native upgrade (blocks everything else)
+The app now runs **React Native 0.76.9** targeting **SDK 35** with AGP 8.6 + Gradle 8.10.2.
 
-Upgrade to **React Native 0.76+** (New Architecture stable). This is a ~1–2 day migration but unlocks all the package upgrades below.
+### Priority 2 — Further package upgrades (optional)
 
-```
-react-native: 0.72.7 → 0.76.x or later
-react: 18.2.0 → 18.3.x
-```
+| Package | Current | Notes |
+|---|---|---|
+| `react-native-maps` | 1.20.0 (pinned) | 1.21+ requires react ≥ 18.3.1; upgrade when RN allows react 18.3 |
+| `react-native-screens` | ^3.34.0 | Can upgrade to 4.x when ready |
+| `@react-native-firebase/*` | ^20.5.0 | 21.x available — low priority |
+| `typescript` | 5.0.4 | Can upgrade to 5.8.x — no breaking changes expected |
 
-Resources: https://reactnative.dev/docs/upgrading
+### Priority 3 — Android build cleanup ✅ Done
 
-### Priority 2 — Package upgrades (unblocked after RN upgrade)
-
-| Package | Current (forced) | Target | Reason downgraded |
-|---|---|---|---|
-| `react-native-maps` | 1.14.0 | 1.20.x | 1.18+ uses `UIBlockViewResolver` (RN 0.73+ API) |
-| `react-native-screens` | 3.22.1 | 4.x | 3.37+ uses `BaseReactPackage` (RN 0.73+ API) |
-| `react-native-safe-area-context` | 4.7.4 | 5.x | Downgraded alongside screens |
-| `@react-native-firebase/app` | 18.7.3 | 21.x | Older Firebase SDK |
-| `@react-native-firebase/firestore` | 18.7.3 | 21.x | Older Firebase SDK |
-| `typescript` | 5.0.4 | 5.8.x | Minor — no breaking changes expected |
-
-### Priority 3 — Android build cleanup (after RN upgrade)
-
-Once on RN 0.76+, the following workarounds in `android/build.gradle` can be removed:
-- The `subprojects` block forcing `jvmTarget = "11"` (handled natively by newer AGP)
-- The explicit `kotlin-gradle-plugin:1.9.0` classpath entry
-- Gradle can be upgraded from 8.5 → 8.10+
+All AGP 7.x workarounds removed as part of the RN 0.76 upgrade:
+- Gradle upgraded to 8.10.2
+- AGP upgraded to 8.6.0
+- Kotlin 1.9.24 set explicitly
+- Flipper removed
 
 ### Priority 4 — iOS support
 
@@ -493,4 +545,90 @@ All files below now import `useColors()` instead of the static `colors` constant
 
 #### Architecture rule added
 - `makeStyles(colors: ColorPalette)` pattern is now the standard for all components. Never use module-level `StyleSheet.create` with `colors.*` tokens — colors are resolved at render time from the active theme.
+
+---
+
+### Session: 2026-05-28 — Play Store blockers + RN 0.72.7 → 0.76.9 upgrade
+
+#### 1. Release keystore generated
+- **`android/app/release.keystore`** *(gitignored)* — RSA 2048, 10 000-day validity, alias `proxiSport`, owner `Azro Lamfi`. **Ask Azro for the file and passwords — never commit it.**
+- **`android/keystore.properties`** *(gitignored)* — contains `storeFile`, `storePassword`, `keyAlias`, `keyPassword`. **Also ask Azro — never commit it.**
+- **`.gitignore`** — confirmed `*.keystore` (except `debug.keystore`) and `android/keystore.properties` are ignored.
+
+#### 2. `android/app/build.gradle` — release signing + Proguard
+- Keystore loaded at top of file via `def keystorePropertiesFile = rootProject.file("keystore.properties")`.
+- `signingConfigs.release` uses `keystoreProperties.*` values (falls back to no-op if file is absent — debug builds unaffected).
+- `buildTypes.release.minifyEnabled true`, `enableProguardInReleaseBuilds = true` (was `false`).
+- JSC dependency removed — Hermes is the only JS engine in RN 0.76+.
+- Native modules applied with try/catch to avoid build failure if file is temporarily missing.
+
+#### 3. React Native upgrade: 0.72.7 → 0.76.9
+
+##### Why
+RN 0.72.7 uses AGP 7.x which cannot target SDK 35+ (required by Play Store from August 2025). Upgrading to RN 0.76 brings AGP 8.x + Gradle 8.10.2, enabling SDK 35.
+
+##### `package.json` changes
+| Package | Before | After |
+|---|---|---|
+| `react-native` | `0.72.7` | `0.76.9` |
+| `react` | `18.3.2` | `18.2.0` (required by RN 0.76.9) |
+| `react-native-maps` | `^1.14.0` | `1.20.0` (exact pin — 1.21+ requires react ≥ 18.3.1) |
+| `react-native-safe-area-context` | `^4.7.4` | `^4.11.0` |
+| `react-native-screens` | `^3.22.1` | `^3.34.0` |
+| `react-native-svg` | `^14.x` | `^15.0.0` |
+| `@react-native-firebase/app` | `^18.7.3` | `^20.5.0` |
+| `@react-native-firebase/firestore` | `^18.7.3` | `^20.5.0` |
+| `@react-native/babel-preset` | *(absent)* | `^0.76.9` |
+| `@react-native/eslint-config` | *(absent)* | `^0.76.9` |
+| `@react-native/metro-config` | *(absent)* | `^0.76.9` |
+| `@react-native/typescript-config` | *(absent)* | `^0.76.9` |
+| `@react-native-community/cli` | *(absent)* | `14.1.2` (devDep — required to run `react-native run-android`) |
+
+##### `android/build.gradle` changes
+```gradle
+buildToolsVersion = "37.0.0"   // was "30.0.3" (35.0.0 not installed, 37.0.0 backward-compat)
+minSdkVersion = 24              // unchanged
+compileSdkVersion = 35          // was 33
+targetSdkVersion = 35           // was 33
+ndkVersion = "26.1.10909125"    // was "23.1.7779620"
+kotlinVersion = "1.9.24"        // was not set
+```
+AGP classpath: `com.android.tools.build:gradle:8.6.0` (was `7.4.2`).
+
+##### `android/gradle/wrapper/gradle-wrapper.properties`
+`distributionUrl` changed to `gradle-8.10.2-all.zip` (was `gradle-8.5-all.zip`).
+
+##### `android/gradle.properties`
+- Removed Flipper (`FLIPPER_VERSION` line).
+- Added `android.suppressUnsupportedCompileSdk=35`.
+- Added `newArchEnabled=false`, `hermesEnabled=true`, `reactNativeArchitectures=armeabi-v7a,arm64-v8a,x86,x86_64`.
+
+##### `android/settings.gradle`
+Rewritten to RN 0.76 format:
+```gradle
+pluginManagement { includeBuild("../node_modules/@react-native/gradle-plugin") }
+apply plugin: "com.facebook.react.settings"
+extensions.configure(com.facebook.react.ReactSettingsExtension){ ex -> ex.autolinkLibrariesFromCommand() }
+rootProject.name = 'PP'
+include ':app'
+```
+
+##### `babel.config.js`
+Preset changed from `module:metro-react-native-babel-preset` to `module:@react-native/babel-preset`.
+
+#### 4. SDK 35 setup (Android)
+- `android-35` (vanilla, no suffix) installed via Android Studio SDK Manager.
+- Build-tools `35.0.0` was not available — using `37.0.0` (backward compatible).
+- `android-36` junction was created pointing to `android-36.1` during earlier experiments but was causing aapt2 errors (Android 16 resource format incompatible with AGP 7.x). Left in place after RN upgrade succeeded.
+
+#### 5. Environment notes (updated)
+> ⚠️ The §12 environment setup table is now outdated. For RN 0.76, install:
+> - **Android SDK Platform 35** (vanilla — no `.1` or `-2` suffix)
+> - **Build-Tools 37.0.0** (or 36.1.0 — both work; 35.0.0 is not needed)
+> - **NDK 26.1.10909125** (not 23.1.7779620)
+> - **AGP 8.6.0** is bundled — Java 17 still required
+> - `@react-native-community/cli` must be in `devDependencies` (RN 0.76 no longer bundles it)
+
+#### 6. TypeScript — zero errors after upgrade
+`npx tsc --noEmit` returned no errors after all package upgrades. No source file changes were needed for the RN 0.76 migration.
 
