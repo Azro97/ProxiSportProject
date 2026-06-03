@@ -3,7 +3,7 @@
 import { Match } from '../models/Match';
 import { Filtre } from '../models/Filtre';
 import { startOfDay, endOfDay, isSameDay } from '../utils/date';
-import { MOCK_MATCHES, MOCK_REGIONS, MOCK_DEPARTEMENTS, getFreshMockMatches } from './mockData';
+import { MOCK_MATCHES, MOCK_REGIONS, MOCK_DEPARTEMENTS, getFreshMockMatches } from './mock/mockData';
 import type { FirebaseFirestoreTypes } from '@react-native-firebase/firestore';
 
 // TODO: set to false and configure google-services.json to use real Firestore
@@ -145,4 +145,41 @@ export function getRegions(): string[] {
 /** Returns the list of departements for a given region. */
 export function getDepartements(region: string): string[] {
   return MOCK_DEPARTEMENTS[region] ?? [];
+}
+
+/**
+ * All matches (past + upcoming) involving a given team, sorted newest first.
+ * Firestore runs two queries (equipeA_id / equipeB_id) and merges.
+ */
+export async function getMatchsByEquipe(equipeId: string): Promise<Match[]> {
+  if (USE_MOCK) {
+    return getFreshMockMatches()
+      .filter(m => m.equipeA_id === equipeId || m.equipeB_id === equipeId)
+      .sort((a, b) => b.dateHeure.getTime() - a.dateHeure.getTime());
+  }
+
+  const firestore = (await import('@react-native-firebase/firestore')).default;
+  const [snapA, snapB] = await Promise.all([
+    firestore().collection('matchs').where('equipeA_id', '==', equipeId).get(),
+    firestore().collection('matchs').where('equipeB_id', '==', equipeId).get(),
+  ]);
+
+  const toMatch = (doc: FirebaseFirestoreTypes.QueryDocumentSnapshot): Match => {
+    const data = doc.data();
+    return {
+      ...data,
+      id: doc.id,
+      dateHeure: (data.dateHeure as FirebaseFirestoreTypes.Timestamp).toDate(),
+    } as Match;
+  };
+
+  const seen = new Set<string>();
+  const matches: Match[] = [];
+  for (const doc of [...snapA.docs, ...snapB.docs]) {
+    if (!seen.has(doc.id)) {
+      seen.add(doc.id);
+      matches.push(toMatch(doc));
+    }
+  }
+  return matches.sort((a, b) => b.dateHeure.getTime() - a.dateHeure.getTime());
 }

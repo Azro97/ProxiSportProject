@@ -1,4 +1,4 @@
-// src/screens/MatchDetailScreen.tsx
+// src/screens/matchDetail/MatchDetailScreen.tsx
 
 import React, { useEffect, useState, useMemo } from 'react';
 import {
@@ -13,14 +13,14 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { ArrowLeft, Calendar, MapPin, Trophy, Building2 } from 'lucide-react-native';
-import { RootStackParamList } from '../types';
-import { Match } from '../models/Match';
-import { Terrain } from '../models/Terrain';
-import { getMatchById } from '../services/matchsService';
-import { getTerrainById } from '../services/terrainsService';
-import { sportColors, sportColorsSoft, radii, type ColorPalette } from '../theme';
-import { useColors } from '../hooks/useColors';
-import { useThemeStore } from '../stores/themeStore';
+import { RootStackParamList } from '../../types';
+import { Match } from '../../models/Match';
+import { Terrain } from '../../models/Terrain';
+import { getMatchById } from '../../services/matchsService';
+import { getTerrainById } from '../../services/terrainsService';
+import { sportColors, sportColorsSoft, radii, type ColorPalette } from '../../theme';
+import { useColors } from '../../hooks/useColors';
+import { useThemeStore } from '../../stores/themeStore';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'MatchDetail'>;
 

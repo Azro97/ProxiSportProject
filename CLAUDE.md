@@ -93,3 +93,52 @@ cd android
 - Stack: React Native (bare), TypeScript, Zustand, Firebase Firestore, react-native-maps
 - Dependency direction: `screens -> stores -> services -> firebase` (one-way)
 - `react-native-maps` pinned to `1.20.0` - do not upgrade
+
+---
+
+## Before deploying to production (iOS & Android)
+
+### 1. Team search — switch to Algolia
+
+Currently `getAllEquipes()` reads **every team document** from Firestore on first load (cached in memory for the session). This is fine in dev but expensive at scale:
+
+| Teams | Daily users | Reads/day | Firestore cost/month |
+|-------|------------|-----------|----------------------|
+| 500   | 1,000      | 500K      | ~$1.80 |
+| 2,000 | 5,000      | 10M       | ~$36 |
+| 10,000| 20,000     | 200M      | ~$720 |
+
+**Fix:** Integrate Algolia before launch.
+- Install the **official Firebase/Algolia extension** in the Firebase console — it auto-syncs Firestore writes to an Algolia index, zero manual work.
+- Replace `getAllEquipes()` in `ClassementsScreen` with an Algolia search call.
+- Firestore reads for search drop to zero; you only read the full document when a user taps a result.
+- **Cost**: Algolia free tier = 10K operations/month (early stage); paid ~$50/month for 100K ops.
+- Algolia gives typo tolerance and better relevance out of the box.
+
+### 2. Firebase setup (required for both platforms)
+
+- [ ] Add real `google-services.json` (Android) from Firebase console → Project settings → Android app
+- [ ] Add real `GoogleService-Info.plist` (iOS) from Firebase console → Project settings → iOS app
+- [ ] Set `USE_MOCK = false` (or remove the `__DEV__` flag) in all service files once Firestore data is populated
+- [ ] Create Firestore collections: `equipes`, `matchs`, `terrains` and seed with real data
+
+### 3. iOS — first-time setup
+
+iOS has never been built for this project. Steps needed:
+- Install CocoaPods: `sudo gem install cocoapods`
+- Run `cd ios && pod install`
+- Open `ios/ProxiSport.xcworkspace` in Xcode
+- Set Bundle ID, signing team, and provisioning profile in Xcode → Signing & Capabilities
+- Add `GoogleService-Info.plist` to the Xcode project (drag into project tree, copy if needed)
+- Build: `npx react-native run-ios` or archive via Xcode for App Store submission
+
+### 4. Release checklist (both platforms)
+
+- [ ] Algolia integration done (see §1 above)
+- [ ] Real Firebase data populated and `USE_MOCK = false`
+- [ ] Generate Android `release.keystore` (see "Release / Deploy to Android" section above)
+- [ ] `reactNativeArchitectures=armeabi-v7a,arm64-v8a,x86,x86_64` restored in `gradle.properties`
+- [ ] iOS provisioning profile + signing configured in Xcode
+- [ ] App icons and splash screen added for both platforms
+- [ ] Test on a real device (not emulator) before submitting to stores
+

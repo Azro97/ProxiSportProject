@@ -5,6 +5,7 @@
 export type RootStackParamList = {
   MainTabs: undefined;
   MatchDetail: { matchId: string };
+  TeamDetail: { equipeId: string };
 };
 
 export type BottomTabParamList = {

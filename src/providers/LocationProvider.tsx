@@ -1,11 +1,11 @@
-// src/app/providers/LocationProvider.tsx
+// src/providers/LocationProvider.tsx
 // Requests GPS permission once at app launch and writes to locationStore.
 // If permission is denied, falls back to DEFAULT_LAT/LNG (Paris centroid).
 
 import React, { useEffect } from 'react';
 import { Platform, PermissionsAndroid } from 'react-native';
 import Geolocation from '@react-native-community/geolocation';
-import { useLocationStore, DEFAULT_LAT, DEFAULT_LNG } from '../../stores/locationStore';
+import { useLocationStore, DEFAULT_LAT, DEFAULT_LNG } from '../stores/locationStore';
 
 type Props = { children: React.ReactNode };
 

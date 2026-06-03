@@ -2,7 +2,7 @@
 
 import { Terrain } from '../models/Terrain';
 import { haversineDistance } from '../utils/geo';
-import { MOCK_TERRAINS } from './mockData';
+import { MOCK_TERRAINS } from './mock/mockData';
 
 // TODO: set to false and configure google-services.json to use real Firestore
 const USE_MOCK = __DEV__;

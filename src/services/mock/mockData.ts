@@ -1,10 +1,10 @@
-// src/services/mockData.ts
+// src/services/mock/mockData.ts
 // Development mock data. Used by all services when USE_MOCK is true.
 // Replace with real Firestore data when google-services.json is configured.
 
-import { Terrain } from '../models/Terrain';
-import { Match } from '../models/Match';
-import { Equipe } from '../models/Equipe';
+import { Terrain } from '../../models/Terrain';
+import { Match } from '../../models/Match';
+import { Equipe } from '../../models/Equipe';
 
 export const MOCK_REGIONS = [
   'Île-de-France',
@@ -564,6 +564,74 @@ const makeMockMatches = (): Match[] => [
     division: 'Nationale 3',
     region: 'PACA',
     departement: 'Var (83)',
+  },
+
+  // ── Past matches (negative offsets) ─────────────────────────────────────────
+  {
+    id: 'mp1',
+    sport: 'foot',
+    equipeA_id: 'e2', equipeA_nom: 'Red Star',
+    equipeB_id: 'e1', equipeB_nom: 'Paris FC',
+    terrain_id: 't1',
+    dateHeure: d(-7, 20, 0),
+    division: 'Nationale 1',
+    region: 'Île-de-France',
+    departement: 'Paris (75)',
+  },
+  {
+    id: 'mp2',
+    sport: 'foot',
+    equipeA_id: 'e1', equipeA_nom: 'Paris FC',
+    equipeB_id: 'e3', equipeB_nom: 'Antony FC',
+    terrain_id: 't1',
+    dateHeure: d(-14, 18, 0),
+    division: 'Nationale 1',
+    region: 'Île-de-France',
+    departement: 'Paris (75)',
+  },
+  {
+    id: 'mp3',
+    sport: 'basket',
+    equipeA_id: 'e12', equipeA_nom: 'Créteil Basket',
+    equipeB_id: 'e11', equipeB_nom: 'Paris Basket',
+    terrain_id: 't2',
+    dateHeure: d(-10, 19, 0),
+    division: 'Nationale 2',
+    region: 'Île-de-France',
+    departement: 'Paris (75)',
+  },
+  {
+    id: 'mp4',
+    sport: 'basket',
+    equipeA_id: 'e5', equipeA_nom: 'Montpellier Basket',
+    equipeB_id: 'e6', equipeB_nom: 'Nîmes Basket',
+    terrain_id: 't3',
+    dateHeure: d(-5, 20, 30),
+    division: 'Nationale 1',
+    region: 'Occitanie',
+    departement: 'Hérault (34)',
+  },
+  {
+    id: 'mp5',
+    sport: 'foot',
+    equipeA_id: 'e23', equipeA_nom: 'Lyon FC B',
+    equipeB_id: 'e24', equipeB_nom: 'Grenoble FC',
+    terrain_id: 't8',
+    dateHeure: d(-3, 20, 0),
+    division: 'Régionale 2',
+    region: 'Auvergne-Rhône-Alpes',
+    departement: 'Rhône (69)',
+  },
+  {
+    id: 'mp6',
+    sport: 'hand',
+    equipeA_id: 'e7', equipeA_nom: 'Brest HB',
+    equipeB_id: 'e8', equipeB_nom: 'Quimper HB',
+    terrain_id: 't12',
+    dateHeure: d(-21, 19, 0),
+    division: 'Départementale 1',
+    region: 'Bretagne',
+    departement: 'Finistère (29)',
   },
 ];
 

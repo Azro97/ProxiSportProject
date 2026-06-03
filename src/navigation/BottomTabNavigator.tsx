@@ -6,7 +6,7 @@ import { Map, List, Trophy } from 'lucide-react-native';
 import { BottomTabParamList } from '../types';
 import CarteScreen from '../screens/carte/CarteScreen';
 import MatchsScreen from '../screens/matchs/MatchsScreen';
-import ClassementsScreen from '../screens/ClassementsScreen';
+import ClassementsScreen from '../screens/classements/ClassementsScreen';
 import { useColors } from '../hooks/useColors';
 
 const Tab = createBottomTabNavigator<BottomTabParamList>();
