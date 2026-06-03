@@ -1,0 +1,35 @@
+diff --git a/node_modules/@react-native-community/cli-platform-android/native_modules.gradle b/node_modules/@react-native-community/cli-platform-android/native_modules.gradle
+index 218a860..f0bc417 100644
+--- a/node_modules/@react-native-community/cli-platform-android/native_modules.gradle
++++ b/node_modules/@react-native-community/cli-platform-android/native_modules.gradle
+@@ -414,8 +414,8 @@ class ReactNativeModules {
+                           .directory(directory)
+                           .redirectErrorStream(true)
+                           .start()
+-          int exitCode = process.waitFor()
+           def output = process.inputStream.text.trim()
++          int exitCode = process.waitFor()
+           if (exitCode != 0) {
+               throw new Exception("Command '${command}' failed with exit code ${exitCode}.")
+           }
+@@ -576,11 +576,15 @@ ext.applyNativeModulesAppBuildGradle = { Project project ->
+     preBuild.dependsOn generateNewArchitectureFiles
+   }
+ 
+-  android {
+-    sourceSets {
+-      main {
+-        java {
+-          srcDirs += generatedSrcDir
++  // Skip adding rncli source dir when new autolinking (RN 0.76+) is active to avoid
++  // duplicate com.facebook.react.PackageList with the autolinking-generated one.
++  if (!project.tasks.names.contains("generateAutolinkingPackageList")) {
++    android {
++      sourceSets {
++        main {
++          java {
++            srcDirs += generatedSrcDir
++          }
+         }
+       }
+     }

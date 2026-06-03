@@ -14,6 +14,7 @@ ios/
 .expo/
 dist/
 build/
+.cxx/
 coverage/
 .env
 .env.local
