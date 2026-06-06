@@ -26,9 +26,14 @@ MapLibreGL.setAccessToken(null);
 const RADIUS_KM = 50;
 const DEFAULT_ZOOM = 10;
 
-// OpenFreeMap: free, no API key, proper dark + light styles
-const STYLE_LIGHT = 'https://tiles.openfreemap.org/styles/bright';
-const STYLE_DARK  = 'https://tiles.openfreemap.org/styles/dark';
+// In dev: use local proxy on host machine (10.0.2.2) to bypass emulator DNS.
+// In prod: connect directly to OpenFreeMap over HTTPS.
+// Run `npm run tile-proxy` in a separate terminal when testing on emulator.
+const PROXY_BASE  = 'http://10.0.2.2:7777';
+const PROD_BASE   = 'https://tiles.openfreemap.org';
+const BASE        = __DEV__ ? PROXY_BASE : PROD_BASE;
+const STYLE_LIGHT = `${BASE}/styles/bright`;
+const STYLE_DARK  = `${BASE}/styles/dark`;
 
 export default function CarteScreen() {
   const colors = useColors();
