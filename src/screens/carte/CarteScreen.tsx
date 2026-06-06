@@ -1,12 +1,14 @@
 // src/screens/carte/CarteScreen.tsx
-// Full-screen Google Maps centered on user GPS position (from locationStore).
+// Full-screen map using MapLibre GL + OpenFreeMap tiles.
+// No Google Maps API key required.
+// Supports dark/light mode via styleURL swap.
 // Shows terrain markers; tapping one opens TerrainModal.
 // Floating sport filter chips are local state — independent of filtresStore.
 
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useState, useMemo, useRef } from 'react';
 import { View, Text, StyleSheet, StatusBar, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import MapView, { Marker } from 'react-native-maps';
+import MapLibreGL from '@maplibre/maplibre-react-native';
 import { LocateFixed } from 'lucide-react-native';
 import { useLocationStore } from '../../stores/locationStore';
 import { getTerrainsByLocation } from '../../services/terrainsService';
@@ -18,8 +20,15 @@ import { useThemeStore } from '../../stores/themeStore';
 import TerrainModal from './components/TerrainModal';
 import SportFloatingFilter from './components/SportFloatingFilter';
 
+// No access token needed — OpenFreeMap is fully public
+MapLibreGL.setAccessToken(null);
+
 const RADIUS_KM = 50;
-const DEFAULT_DELTA = 0.5;
+const DEFAULT_ZOOM = 10;
+
+// OpenFreeMap: free, no API key, proper dark + light styles
+const STYLE_LIGHT = 'https://tiles.openfreemap.org/styles/bright';
+const STYLE_DARK  = 'https://tiles.openfreemap.org/styles/dark';
 
 export default function CarteScreen() {
   const colors = useColors();
@@ -30,7 +39,8 @@ export default function CarteScreen() {
   const [selectedTerrain, setSelectedTerrain] = useState<Terrain | null>(null);
   const [sportFilter, setSportFilter] = useState<string | null>(null);
   const [sportTerrainIds, setSportTerrainIds] = useState<Set<string> | null>(null);
-  const mapRef = React.useRef<MapView>(null);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const cameraRef = useRef<any>(null);
 
   const centerLat = lat ?? 48.8566;
   const centerLng = lng ?? 2.3522;
@@ -58,40 +68,50 @@ export default function CarteScreen() {
     : terrains;
 
   const handleRecenter = () => {
-    mapRef.current?.animateToRegion({
-      latitude: centerLat,
-      longitude: centerLng,
-      latitudeDelta: DEFAULT_DELTA,
-      longitudeDelta: DEFAULT_DELTA,
-    }, 400);
+    // MapLibre uses [longitude, latitude] GeoJSON order
+    cameraRef.current?.setCamera({
+      centerCoordinate: [centerLng, centerLat],
+      zoomLevel: DEFAULT_ZOOM,
+      animationDuration: 400,
+    });
   };
 
   return (
     <View style={styles.root}>
       <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} backgroundColor="transparent" translucent />
 
-      <MapView
-        ref={mapRef}
+      <MapLibreGL.MapView
         style={StyleSheet.absoluteFillObject}
-        initialRegion={{
-          latitude: centerLat,
-          longitude: centerLng,
-          latitudeDelta: DEFAULT_DELTA,
-          longitudeDelta: DEFAULT_DELTA,
-        }}
-        showsUserLocation={status === 'granted'}
-        mapType="standard"
+        mapStyle={isDark ? STYLE_DARK : STYLE_LIGHT}
+        logoEnabled={false}
+        attributionEnabled={false}
       >
-        {visibleTerrains.map(terrain => (
-          <Marker
-            key={`${terrain.id}-${sportFilter ?? 'all'}`}
-            coordinate={{ latitude: terrain.lat, longitude: terrain.lng }}
-            title={terrain.nom}
-            pinColor={sportFilter ? (sportColors[sportFilter] ?? colors.textMuted) : colors.textMuted}
-            onPress={() => setSelectedTerrain(terrain)}
-          />
-        ))}
-      </MapView>
+        <MapLibreGL.Camera
+          ref={cameraRef}
+          zoomLevel={DEFAULT_ZOOM}
+          centerCoordinate={[centerLng, centerLat]}
+        />
+
+        {status === 'granted' && (
+          <MapLibreGL.UserLocation visible androidRenderMode="normal" />
+        )}
+
+        {visibleTerrains.map(terrain => {
+          const pinColor = sportFilter
+            ? (sportColors[sportFilter] ?? colors.textMuted)
+            : colors.textMuted;
+          return (
+            <MapLibreGL.PointAnnotation
+              key={`${terrain.id}-${sportFilter ?? 'all'}`}
+              id={terrain.id}
+              coordinate={[terrain.lng, terrain.lat]}
+              onSelected={() => setSelectedTerrain(terrain)}
+            >
+              <View style={[styles.pin, { backgroundColor: pinColor }]} />
+            </MapLibreGL.PointAnnotation>
+          );
+        })}
+      </MapLibreGL.MapView>
 
       {/* Floating header */}
       <SafeAreaView edges={['top']} style={styles.headerSafe} pointerEvents="box-none">
@@ -136,6 +156,13 @@ export default function CarteScreen() {
 function makeStyles(colors: ColorPalette) {
   return StyleSheet.create({
     root: { flex: 1, backgroundColor: colors.bgApp },
+    pin: {
+      width: 16,
+      height: 16,
+      borderRadius: 8,
+      borderWidth: 2,
+      borderColor: '#fff',
+    },
     headerSafe: {
       position: 'absolute',
       top: 0,

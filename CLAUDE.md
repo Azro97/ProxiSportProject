@@ -90,9 +90,33 @@ cd android
 
 ## Architecture
 
-- Stack: React Native (bare), TypeScript, Zustand, Firebase Firestore, react-native-maps
+- Stack: React Native (bare), TypeScript, Zustand, Firebase Firestore, MapLibre GL
 - Dependency direction: `screens -> stores -> services -> firebase` (one-way)
-- `react-native-maps` pinned to `1.20.0` - do not upgrade
+- Map library: `@maplibre/maplibre-react-native@10.4.2` (pinned — v11+ requires React 19)
+
+## Map — MapLibre GL
+
+**Library:** `@maplibre/maplibre-react-native@10.4.2`
+**Tile provider:** [OpenFreeMap](https://openfreemap.org) — free, no API key, no billing risk
+**Styles:**
+- Light: `https://tiles.openfreemap.org/styles/bright`
+- Dark: `https://tiles.openfreemap.org/styles/dark`
+
+**Key API differences vs react-native-maps:**
+| Concept | react-native-maps | MapLibre |
+|---|---|---|
+| Coordinates | `{ latitude, longitude }` | `[longitude, latitude]` (GeoJSON) |
+| Camera control | `mapRef.animateToRegion()` | `<Camera ref>` component + `setCamera()` |
+| User dot | `showsUserLocation` prop | `<MapLibreGL.UserLocation />` child |
+| Markers | `<Marker pinColor>` | `<PointAnnotation>` with custom `<View>` child |
+| Dark mode | Custom JSON style array | Just swap `styleURL` |
+
+**Before going to production (map):**
+- [ ] Replace OpenFreeMap with a provider that has an SLA:
+  - **Stadia Maps** (recommended): free up to 200K req/month, proper SLA. Sign up at `client.stadiamaps.com`, get API key, use: `https://tiles.stadiamaps.com/styles/alidade_smooth.json?api_key=YOUR_KEY`
+  - **MapTiler**: free up to 100K req/month. `https://api.maptiler.com/maps/streets/style.json?key=YOUR_KEY`
+  - Store the key in `.env` / build config, never hardcode in source
+- [ ] Re-enable attribution: set `attributionEnabled={true}` on `MapLibreGL.MapView` (OpenFreeMap terms require credit)
 
 ---
 
