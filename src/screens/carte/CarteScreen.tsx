@@ -23,6 +23,98 @@ import SportFloatingFilter from './components/SportFloatingFilter';
 // No access token needed — OpenFreeMap is fully public
 MapLibreGL.setAccessToken(null);
 
+const SPORT_EMOJI: Record<string, string> = {
+  foot: '⚽', basket: '🏀', hand: '🤾', volley: '🏐',
+};
+
+// Beautiful teardrop map pin:
+//   • Large colored circle head with white border + drop shadow
+//   • Sport emoji (big) when a filter is active, else white dot
+//   • Thin inner white ring for a "glass" depth effect
+//   • Sharp downward tail that tapers to a point
+//   • Tiny oval shadow beneath the tip for grounding
+// Defined at module level — never re-created on render.
+const PIN_SIZE = 52;
+
+function MapPin({ color, sport }: { color: string; sport: string | null }) {
+  const emoji = sport ? SPORT_EMOJI[sport] : null;
+  return (
+    <View style={PIN_S.wrapper}>
+      {/* Circle head */}
+      <View style={[PIN_S.circle, { backgroundColor: color }]}>
+        {/* Inner white ring for depth */}
+        <View style={PIN_S.ring}>
+          {emoji
+            ? <Text style={PIN_S.emoji}>{emoji}</Text>
+            : <View style={PIN_S.dot} />}
+        </View>
+      </View>
+      {/* Downward tail */}
+      <View style={[PIN_S.tail, { borderTopColor: color }]} />
+      {/* Ground shadow */}
+      <View style={PIN_S.groundShadow} />
+    </View>
+  );
+}
+
+const PIN_S = StyleSheet.create({
+  wrapper: {
+    alignItems: 'center',
+    paddingHorizontal: 6,   // room for shadow not to clip
+  },
+  circle: {
+    width: PIN_SIZE,
+    height: PIN_SIZE,
+    borderRadius: PIN_SIZE / 2,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 3.5,
+    borderColor: '#ffffff',
+    elevation: 10,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 5 },
+    shadowOpacity: 0.4,
+    shadowRadius: 8,
+  },
+  ring: {
+    width: PIN_SIZE - 14,
+    height: PIN_SIZE - 14,
+    borderRadius: (PIN_SIZE - 14) / 2,
+    borderWidth: 2,
+    borderColor: 'rgba(255,255,255,0.35)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  emoji: {
+    fontSize: 22,
+    lineHeight: 26,
+    textAlign: 'center',
+  },
+  dot: {
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    backgroundColor: 'rgba(255,255,255,0.95)',
+  },
+  tail: {
+    width: 0,
+    height: 0,
+    borderLeftWidth: 10,
+    borderRightWidth: 10,
+    borderTopWidth: 18,
+    borderLeftColor: 'transparent',
+    borderRightColor: 'transparent',
+    marginTop: -3,
+  },
+  groundShadow: {
+    width: 14,
+    height: 5,
+    borderRadius: 7,
+    backgroundColor: 'rgba(0,0,0,0.18)',
+    marginTop: 1,
+  },
+});
+
 const RADIUS_KM = 50;
 const DEFAULT_ZOOM = 10;
 
@@ -103,17 +195,21 @@ export default function CarteScreen() {
 
         {visibleTerrains.map(terrain => {
           const pinColor = sportFilter
-            ? (sportColors[sportFilter] ?? colors.textMuted)
-            : colors.textMuted;
+            ? (sportColors[sportFilter] ?? colors.userPosition)
+            : colors.userPosition;
           return (
-            <MapLibreGL.PointAnnotation
+            <MapLibreGL.MarkerView
               key={`${terrain.id}-${sportFilter ?? 'all'}`}
-              id={terrain.id}
               coordinate={[terrain.lng, terrain.lat]}
-              onSelected={() => setSelectedTerrain(terrain)}
+              anchor={{ x: 0.5, y: 1.0 }}
             >
-              <View style={[styles.pin, { backgroundColor: pinColor }]} />
-            </MapLibreGL.PointAnnotation>
+              <TouchableOpacity
+                onPress={() => setSelectedTerrain(terrain)}
+                activeOpacity={0.8}
+              >
+                <MapPin color={pinColor} sport={sportFilter} />
+              </TouchableOpacity>
+            </MapLibreGL.MarkerView>
           );
         })}
       </MapLibreGL.MapView>
@@ -161,13 +257,6 @@ export default function CarteScreen() {
 function makeStyles(colors: ColorPalette) {
   return StyleSheet.create({
     root: { flex: 1, backgroundColor: colors.bgApp },
-    pin: {
-      width: 16,
-      height: 16,
-      borderRadius: 8,
-      borderWidth: 2,
-      borderColor: '#fff',
-    },
     headerSafe: {
       position: 'absolute',
       top: 0,
