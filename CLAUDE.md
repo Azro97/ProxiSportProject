@@ -83,10 +83,47 @@ cd android
 
 ---
 
-## TODO
+## Completed Features
 
-- [ ] **TeamDetailScreen** - screen showing team info + upcoming matches; navigate from a team name tap; load via `getEquipeById(id)` in `equipesService.ts`
-- [ ] **Match history screen** - past matches; needs `statut` + `scoreA`/`scoreB` on Match model; add `getMatchsJoues(equipeId?)` to `matchsService.ts`
+| Feature | Details |
+|---|---|
+| MapLibre + tile proxy | `@maplibre/maplibre-react-native@10.4.2`, OpenFreeMap tiles, local proxy on port 7777 |
+| Match list (upcoming) | Sport / région / division / date filters via Zustand `filtresStore` |
+| Match results (scores) | Résultats tab in MatchsScreen, `scoreA`/`scoreB` on Match model |
+| Match detail | `MatchDetailScreen` — venue, date, teams, score if played |
+| Team search | `ClassementsScreen` — text + sport filter, navigable from loupe button in MatchsScreen header |
+| Team detail | `TeamDetailScreen` — team info + match history with scores |
+| Tournament list | `TournoiListScreen` — sport + statut filter pills, pull-to-refresh |
+| Tournament detail | `TournoiDetailScreen` — hero photo, info grid, inscription CTA, back button (safe area aware) |
+| Inscription modal | 3-step: form (nom équipe + email + membres pre-filled with `tailleEquipe` slots) → recap → success |
+| Navigation | 3-tab bottom nav (Carte / Matchs / Tournois) + RechercheEquipes as stack screen |
+| Safe area | All screens use `useSafeAreaInsets` or `SafeAreaView` from `react-native-safe-area-context` |
+| Tab bar safe area | `height: 60 + insets.bottom` — gesture nav phones handled |
+| GPS intro screen | First-launch onboarding with animated dot, "Autoriser" / "Passer", persisted via AsyncStorage |
+
+## TODO — Remaining work
+
+### High priority (needed for real users)
+
+- [ ] **Authentication** — No login/signup flow. `Inscription.capitaine_uid` requires a real user. Use Firebase Auth (email/password or Google sign-in). Add `AuthScreen` + guard navigation behind auth state.
+- [ ] **Mes inscriptions** — After signing up for a tournament there is no screen to view registrations. Add a "Mes tournois" section (stack screen or new tab) reading `inscriptions` Firestore collection filtered by `capitaine_uid`.
+- [ ] **Payment (Stripe)** — `Inscription.stripe_payment_intent_id` exists but the modal just shows a mock confirmation. Integrate `@stripe/stripe-react-native`, create a Cloud Function to generate a `PaymentIntent`, present the payment sheet in step 2 of `InscriptionModal`.
+
+### Medium priority (UX polish)
+
+- [ ] **Dark mode toggle** — Removed from all screens. `themeStore` still exists. Add a toggle in a settings screen or a long-press gesture somewhere.
+- [ ] **Live match indicator** — `liveRed` color in theme, `LiveDot` component exists in the other frontend. Port to `MatchCard` / `MatchsScreen` for in-progress matches.
+- [ ] **Create / join a team** — Users can search and view teams but cannot create one. Add a "Créer mon équipe" CTA in `ClassementsScreen` (team search screen).
+- [ ] **Error states** — No UI shown when Firestore/network fails. Add error boundaries or inline error views.
+
+### Before production
+
+- [ ] Switch to real Firebase data (`USE_MOCK = false`) + seed Firestore collections
+- [ ] Algolia integration for team search (see §1 in "Before deploying to production" below)
+- [ ] Firebase `google-services.json` / `GoogleService-Info.plist` with real project
+- [ ] App icons + splash screen (both platforms)
+- [ ] iOS first-time setup (CocoaPods, Xcode signing)
+- [ ] Release keystore + `reactNativeArchitectures` restored for multi-ABI APK
 
 ## Architecture
 

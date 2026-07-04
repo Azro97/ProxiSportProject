@@ -16,7 +16,9 @@ import { RootStackParamList } from '../../types';
 import { Tournoi } from '../../models/Tournoi';
 import { getTournoiById, formatPrix } from '../../services/tournoiService';
 import { useColors } from '../../hooks/useColors';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { sportColors, sportColorsSoft } from '../../theme';
+import InscriptionModal from './components/InscriptionModal';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'TournoiDetail'>;
 
@@ -42,9 +44,11 @@ const FALLBACK_COLORS: Record<string, string[]> = {
 export default function TournoiDetailScreen({ route, navigation }: Props) {
   const { tournoiId } = route.params;
   const colors = useColors();
+  const insets = useSafeAreaInsets();
 
   const [tournoi, setTournoi] = useState<Tournoi | null>(null);
   const [loading, setLoading] = useState(true);
+  const [modalVisible, setModalVisible] = useState(false);
 
   useEffect(() => {
     getTournoiById(tournoiId)
@@ -118,16 +122,8 @@ export default function TournoiDetailScreen({ route, navigation }: Props) {
             <LinearGradient
               colors={['rgba(0,0,0,0)', 'rgba(0,0,0,0.72)']}
               style={StyleSheet.absoluteFillObject}
+              pointerEvents="none"
             />
-
-            {/* Back button */}
-            <TouchableOpacity
-              style={styles.backBtn}
-              onPress={() => navigation.goBack()}
-              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-            >
-              <ArrowLeft size={20} color="#fff" strokeWidth={2.5} />
-            </TouchableOpacity>
 
             {/* Sport badge + title */}
             <View style={styles.heroContent}>
@@ -154,6 +150,12 @@ export default function TournoiDetailScreen({ route, navigation }: Props) {
             <InfoRow icon={<Calendar size={16} color={accent} />} label="Début" value={formatDate(tournoi.dateDebut)} />
             <Divider color={colors.borderHairline} />
             <InfoRow icon={<Calendar size={16} color={accent} />} label="Fin" value={formatDate(tournoi.dateFin)} />
+            <Divider color={colors.borderHairline} />
+            <InfoRow
+              icon={<Users size={16} color={accent} />}
+              label="Format"
+              value={`${tournoi.tailleEquipe}v${tournoi.tailleEquipe} · ${tournoi.maxEquipes} équipes max`}
+            />
             <Divider color={colors.borderHairline} />
             <InfoRow
               icon={<Clock size={16} color={colors.textSecondary} />}
@@ -224,15 +226,22 @@ export default function TournoiDetailScreen({ route, navigation }: Props) {
         </View>
       </ScrollView>
 
+      {/* ── Floating back button (outside ScrollView to avoid touch blocking) ── */}
+      <TouchableOpacity
+        style={[styles.backBtn, { top: insets.top + 8 }]}
+        onPress={() => navigation.goBack()}
+        hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+      >
+        <ArrowLeft size={20} color="#fff" strokeWidth={2.5} />
+      </TouchableOpacity>
+
       {/* ── Sticky CTA ── */}
       {canRegister && (
         <View style={[styles.ctaBar, { backgroundColor: colors.bgApp, borderTopColor: colors.borderHairline }]}>
           <TouchableOpacity
             style={[styles.ctaBtn, { backgroundColor: accent }]}
             activeOpacity={0.85}
-            onPress={() => {
-              // TODO: hook up payment / inscription flow
-            }}
+            onPress={() => setModalVisible(true)}
           >
             <Text style={styles.ctaBtnText}>
               S'inscrire · {formatPrix(tournoi.prixInscription)}
@@ -240,6 +249,12 @@ export default function TournoiDetailScreen({ route, navigation }: Props) {
           </TouchableOpacity>
         </View>
       )}
+
+      <InscriptionModal
+        visible={modalVisible}
+        tournoi={tournoi}
+        onClose={() => setModalVisible(false)}
+      />
     </View>
   );
 }
@@ -289,11 +304,12 @@ const styles = StyleSheet.create({
 
   hero:      { height: 300 },
   heroImage: { flex: 1, justifyContent: 'space-between' },
-  backBtn:   {
-    position: 'absolute', top: 52, left: 16,
-    width: 38, height: 38, borderRadius: 19,
+  backBtn: {
+    position: 'absolute', left: 16,
+    width: 40, height: 40, borderRadius: 20,
     backgroundColor: 'rgba(0,0,0,0.45)',
     alignItems: 'center', justifyContent: 'center',
+    zIndex: 100, elevation: 10,
   },
   heroContent: { padding: 16, gap: 6 },
   sportBadge: {

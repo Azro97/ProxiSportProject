@@ -5,7 +5,6 @@ import {
   View,
   Text,
   StyleSheet,
-  SafeAreaView,
   TextInput,
   FlatList,
   ScrollView,
@@ -13,12 +12,12 @@ import {
   ActivityIndicator,
   Keyboard,
 } from 'react-native';
-import { Moon, Sun, Search, ChevronRight } from 'lucide-react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { Search, ChevronRight, ArrowLeft } from 'lucide-react-native';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { type ColorPalette, sportColors, sportColorsSoft } from '../../theme';
 import { useColors } from '../../hooks/useColors';
-import { useThemeStore } from '../../stores/themeStore';
 import { getAllEquipes } from '../../services/equipesService';
 import { Equipe } from '../../models/Equipe';
 import { RootStackParamList } from '../../types';
@@ -39,7 +38,6 @@ const SPORT_ABBR: Record<string, string> = {
 
 export default function ClassementsScreen() {
   const colors = useColors();
-  const { isDark, toggleTheme } = useThemeStore();
   const navigation = useNavigation<Nav>();
   const styles = useMemo(() => makeStyles(colors), [colors]);
 
@@ -121,10 +119,8 @@ export default function ClassementsScreen() {
             </Text>
           )}
         </View>
-        <TouchableOpacity onPress={toggleTheme} hitSlop={12} style={styles.themeBtn}>
-          {isDark
-            ? <Sun  size={18} color={colors.textSecondary} strokeWidth={2} />
-            : <Moon size={18} color={colors.textSecondary} strokeWidth={2} />}
+        <TouchableOpacity onPress={() => navigation.canGoBack() && navigation.goBack()} hitSlop={12} style={styles.themeBtn}>
+          <ArrowLeft size={20} color={colors.textPrimary} strokeWidth={2} />
         </TouchableOpacity>
       </View>
 

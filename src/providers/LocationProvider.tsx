@@ -13,6 +13,8 @@ export default function LocationProvider({ children }: Props) {
   const { setLocation, setStatus } = useLocationStore();
 
   useEffect(() => {
+    // Skip if GPS intro already handled permission (granted or denied)
+    if (useLocationStore.getState().status !== 'idle') return;
     void requestLocation();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);

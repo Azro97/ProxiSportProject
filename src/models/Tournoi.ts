@@ -17,6 +17,7 @@ export interface Tournoi {
   prixInscription: number;        // centimes — ex: 3000 = 30,00 €
   maxEquipes: number;
   equipesInscrites: number;       // compteur dénormalisé
+  tailleEquipe: number;           // joueurs par équipe — ex: 5 pour 5v5, 4 pour 4v4
   statut: TournoiStatut;
   region: string;
   departement: string;

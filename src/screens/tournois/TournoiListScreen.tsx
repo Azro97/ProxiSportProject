@@ -10,6 +10,7 @@ import { Trophy } from 'lucide-react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { BottomTabScreenProps } from '@react-navigation/bottom-tabs';
 import { CompositeScreenProps } from '@react-navigation/native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { RootStackParamList, BottomTabParamList } from '../../types';
 import { Tournoi } from '../../models/Tournoi';
 import { getTournois } from '../../services/tournoiService';
@@ -39,6 +40,7 @@ const STATUTS = [
 
 export default function TournoiListScreen({ navigation }: Props) {
   const colors = useColors();
+  const insets = useSafeAreaInsets();
 
   const [allTournois, setAllTournois]   = useState<Tournoi[]>([]);
   const [loading, setLoading]           = useState(true);
@@ -104,7 +106,7 @@ export default function TournoiListScreen({ navigation }: Props) {
       <StatusBar barStyle="light-content" />
 
       {/* Header */}
-      <View style={[styles.header, { backgroundColor: colors.bgCard, borderBottomColor: colors.borderHairline }]}>
+      <View style={[styles.header, { backgroundColor: colors.bgCard, borderBottomColor: colors.borderHairline, paddingTop: insets.top + 12 }]}>
         <View style={styles.headerTitle}>
           <Trophy size={22} color={colors.userPosition} strokeWidth={2} />
           <Text style={[styles.headerText, { color: colors.textPrimary }]}>Tournois</Text>
@@ -176,7 +178,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 18,
-    paddingTop: 52,
     paddingBottom: 14,
     borderBottomWidth: StyleSheet.hairlineWidth,
   },

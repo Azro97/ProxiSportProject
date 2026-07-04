@@ -12,7 +12,10 @@ import {
   TouchableOpacity,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Search, Sun, Moon } from 'lucide-react-native';
+import { Search } from 'lucide-react-native';
+import { useNavigation } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import type { RootStackParamList } from '../../types';
 import { useFiltresStore } from '../../stores/filtresStore';
 import { Match } from '../../models/Match';
 import { Terrain } from '../../models/Terrain';
@@ -31,7 +34,7 @@ type Mode = 'upcoming' | 'results';
 export default function MatchsScreen() {
   const colors = useColors();
   const isDark = useThemeStore(s => s.isDark);
-  const toggleTheme = useThemeStore(s => s.toggleTheme);
+  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const {
     sport, regions, divisions, date,
@@ -100,10 +103,8 @@ export default function MatchsScreen() {
               <Text style={{ color: accent }}>près de vous</Text>
             </Text>
           </View>
-          <TouchableOpacity style={styles.themeBtn} onPress={toggleTheme} activeOpacity={0.7}>
-            {isDark
-              ? <Sun size={20} color={colors.textSecondary} strokeWidth={2} />
-              : <Moon size={20} color={colors.textSecondary} strokeWidth={2} />}
+          <TouchableOpacity style={styles.themeBtn} onPress={() => navigation.navigate('RechercheEquipes')} activeOpacity={0.7}>
+            <Search size={20} color={colors.textSecondary} strokeWidth={2} />
           </TouchableOpacity>
         </View>
       </SafeAreaView>
@@ -140,7 +141,7 @@ export default function MatchsScreen() {
       {isLoading && <ActivityIndicator style={styles.loader} color={accent} size="large" />}
     </View>
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  ), [mode, sport, regions, divisions, date, count, accent, isLoading, styles, isDark, toggleTheme, colors]);
+  ), [mode, sport, regions, divisions, date, count, accent, isLoading, styles, isDark, colors]);
 
   const ListEmpty = useMemo(() => !isLoading ? (
     !sport ? (

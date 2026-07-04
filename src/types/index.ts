@@ -7,11 +7,11 @@ export type RootStackParamList = {
   MatchDetail: { matchId: string };
   TeamDetail: { equipeId: string };
   TournoiDetail: { tournoiId: string };
+  RechercheEquipes: undefined;
 };
 
 export type BottomTabParamList = {
   Carte: undefined;
   Matchs: undefined;
   Tournois: undefined;
-  Classements: undefined;
 };
