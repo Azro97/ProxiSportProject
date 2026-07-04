@@ -6,6 +6,7 @@ import { Map, List, Trophy } from 'lucide-react-native';
 import { BottomTabParamList } from '../types';
 import CarteScreen from '../screens/carte/CarteScreen';
 import MatchsScreen from '../screens/matchs/MatchsScreen';
+import TournoiListScreen from '../screens/tournois/TournoiListScreen';
 import ClassementsScreen from '../screens/classements/ClassementsScreen';
 import { useColors } from '../hooks/useColors';
 
@@ -36,6 +37,7 @@ export default function BottomTabNavigator() {
           const iconProps = { color, size: size - 2, strokeWidth: 1.8 };
           if (route.name === 'Carte')       return <Map {...iconProps} />;
           if (route.name === 'Matchs')      return <List {...iconProps} />;
+          if (route.name === 'Tournois')    return <Trophy {...iconProps} />;
           if (route.name === 'Classements') return <Trophy {...iconProps} />;
           return null;
         },
@@ -43,6 +45,7 @@ export default function BottomTabNavigator() {
     >
       <Tab.Screen name="Carte" component={CarteScreen} options={{ title: 'Carte' }} />
       <Tab.Screen name="Matchs" component={MatchsScreen} options={{ title: 'Matchs' }} />
+      <Tab.Screen name="Tournois" component={TournoiListScreen} options={{ title: 'Tournois' }} />
       <Tab.Screen name="Classements" component={ClassementsScreen} options={{ title: 'Classements' }} />
     </Tab.Navigator>
   );

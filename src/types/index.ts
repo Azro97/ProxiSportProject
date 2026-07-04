@@ -6,10 +6,12 @@ export type RootStackParamList = {
   MainTabs: undefined;
   MatchDetail: { matchId: string };
   TeamDetail: { equipeId: string };
+  TournoiDetail: { tournoiId: string };
 };
 
 export type BottomTabParamList = {
   Carte: undefined;
   Matchs: undefined;
+  Tournois: undefined;
   Classements: undefined;
 };

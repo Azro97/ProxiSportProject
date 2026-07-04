@@ -7,6 +7,7 @@ import { RootStackParamList } from '../types';
 import BottomTabNavigator from './BottomTabNavigator';
 import MatchDetailScreen from '../screens/matchDetail/MatchDetailScreen';
 import TeamDetailScreen from '../screens/classements/TeamDetailScreen';
+import TournoiDetailScreen from '../screens/tournois/TournoiDetailScreen';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
@@ -17,6 +18,7 @@ export default function RootNavigator() {
         <Stack.Screen name="MainTabs" component={BottomTabNavigator} />
         <Stack.Screen name="MatchDetail" component={MatchDetailScreen} options={{ headerShown: false }} />
         <Stack.Screen name="TeamDetail" component={TeamDetailScreen} options={{ headerShown: false }} />
+        <Stack.Screen name="TournoiDetail" component={TournoiDetailScreen} options={{ headerShown: false }} />
       </Stack.Navigator>
     </NavigationContainer>
   );
