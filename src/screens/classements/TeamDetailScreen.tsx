@@ -135,21 +135,35 @@ export default function TeamDetailScreen({ route, navigation }: Props) {
           )}
           renderItem={({ item }) => {
             const isPast = item.dateHeure < now;
-            const opponent =
-              item.equipeA_id === equipeId ? item.equipeB_nom : item.equipeA_nom;
             const isHome = item.equipeA_id === equipeId;
+            const opponent = isHome ? item.equipeB_nom : item.equipeA_nom;
+            const hasScore = isPast && item.scoreA !== undefined && item.scoreB !== undefined;
+            const myScore    = hasScore ? (isHome ? item.scoreA! : item.scoreB!) : null;
+            const theirScore = hasScore ? (isHome ? item.scoreB! : item.scoreA!) : null;
+            const resultColor =
+              !hasScore ? colors.textMuted
+              : myScore! > theirScore! ? sportColor
+              : myScore! < theirScore! ? colors.textMuted
+              : colors.textSecondary;
             return (
               <View style={[styles.matchCard, { backgroundColor: colors.bgCard, borderColor: colors.borderSubtle }]}>
                 <View style={styles.matchTop}>
-                  <Text style={[styles.matchOpponent, { color: colors.textPrimary }]}>
+                  <Text style={[styles.matchOpponent, { color: colors.textPrimary }]} numberOfLines={1}>
                     {isHome ? 'vs' : '@'} {opponent}
                   </Text>
-                  <View style={[styles.divisionBadge, { backgroundColor: colors.bgCardElev }]}>
-                    <Text style={[styles.divisionText, { color: colors.textTertiary }]}>{item.division}</Text>
-                  </View>
+                  {hasScore ? (
+                    <Text style={[styles.score, { color: resultColor }]}>
+                      {myScore} – {theirScore}
+                    </Text>
+                  ) : (
+                    <View style={[styles.divisionBadge, { backgroundColor: colors.bgCardElev }]}>
+                      <Text style={[styles.divisionText, { color: colors.textTertiary }]}>{item.division}</Text>
+                    </View>
+                  )}
                 </View>
-                <Text style={[styles.matchDate, { color: isPast ? colors.textMuted : colors.textSecondary }]}>
+                <Text style={[styles.matchDate, { color: colors.textMuted }]}>
                   {formatDate(item.dateHeure)} · {formatTime(item.dateHeure)}
+                  {!hasScore && ` · ${item.division}`}
                 </Text>
               </View>
             );
@@ -210,7 +224,8 @@ function makeStyles(colors: ColorPalette) {
     matchOpponent: { fontSize: 15, fontWeight: '600', flex: 1 },
     divisionBadge: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8 },
     divisionText:  { fontSize: 11, fontWeight: '600' },
-    matchDate:    { fontSize: 12 },
+    score:         { fontSize: 17, fontWeight: '800', letterSpacing: 0.5 },
+    matchDate:     { fontSize: 12 },
     errorText:    { fontSize: 15, color: colors.textMuted },
     emptyText:    { fontSize: 14, color: colors.textMuted },
   });

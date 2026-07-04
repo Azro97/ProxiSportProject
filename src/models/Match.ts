@@ -1,5 +1,7 @@
 import { Division } from './Filtre';
 
+export type MatchStatut = 'à_venir' | 'terminé';
+
 export interface Match {
   id: string;
   sport: string;           // "foot" | "basket" | "hand" | "volley"
@@ -12,4 +14,7 @@ export interface Match {
   division: Division;
   region: string;
   departement: string;
+  statut?: MatchStatut;    // derived from dateHeure when absent
+  scoreA?: number;         // set only when statut === 'terminé'
+  scoreB?: number;
 }

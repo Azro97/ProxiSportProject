@@ -9,22 +9,24 @@ import {
   StyleSheet,
   StatusBar,
   ActivityIndicator,
+  TouchableOpacity,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Search, Sun, Moon } from 'lucide-react-native';
 import { useFiltresStore } from '../../stores/filtresStore';
 import { Match } from '../../models/Match';
 import { Terrain } from '../../models/Terrain';
-import { getMatchs } from '../../services/matchsService';
+import { getMatchs, getMatchsJoues } from '../../services/matchsService';
 import { getTerrainById } from '../../services/terrainsService';
 import SportSelector from './components/SportSelector';
 import AffinerFilter from './components/AffinerFilter';
 import DateFilter from './components/DateFilter';
 import MatchGroupList from './components/MatchGroupList';
-import { colors, sportColors, type ColorPalette } from '../../theme';
+import { sportColors, type ColorPalette } from '../../theme';
 import { useColors } from '../../hooks/useColors';
 import { useThemeStore } from '../../stores/themeStore';
-import { TouchableOpacity } from 'react-native';
+
+type Mode = 'upcoming' | 'results';
 
 export default function MatchsScreen() {
   const colors = useColors();
@@ -36,29 +38,26 @@ export default function MatchsScreen() {
     setSport, setDate,
   } = useFiltresStore();
 
+  const [mode, setMode] = useState<Mode>('upcoming');
   const [matchs, setMatchs] = useState<Match[]>([]);
   const [terrains, setTerrains] = useState<Record<string, Terrain>>({});
   const [loading, setLoading] = useState(false);
+  const [results, setResults] = useState<Match[]>([]);
+  const [resultsLoading, setResultsLoading] = useState(false);
 
-  // Only sport is required — empty regions/divisions mean "Tous" (no filter applied).
-  const allSet = Boolean(sport);
   const accent = sport ? sportColors[sport] : colors.textPrimary;
 
+  // Load upcoming matches (mode === 'upcoming')
   useEffect(() => {
-    if (!sport) {
-      setMatchs([]);
-      setTerrains({});
-      return;
-    }
+    if (mode !== 'upcoming') return;
+    if (!sport) { setMatchs([]); setTerrains({}); return; }
 
-    // 250ms debounce — prevents firing a request on every intermediate tap
-    // when the user quickly picks sport → region → division.
     const timer = setTimeout(async () => {
       setLoading(true);
       try {
-        const results = await getMatchs({ sport, regions, departement: null, divisions, date });
-        setMatchs(results);
-        const uniqueIds = [...new Set(results.map(m => m.terrain_id))];
+        const data = await getMatchs({ sport, regions, departement: null, divisions, date });
+        setMatchs(data);
+        const uniqueIds = [...new Set(data.map(m => m.terrain_id))];
         const pairs = await Promise.all(
           uniqueIds.map(id => getTerrainById(id).then(t => [id, t] as const)),
         );
@@ -69,26 +68,35 @@ export default function MatchsScreen() {
         setLoading(false);
       }
     }, 250);
-
     return () => clearTimeout(timer);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sport, regions, divisions, date]);
+  }, [mode, sport, regions, divisions, date]);
 
-  const totalCount = matchs.length;
+  // Load past results (mode === 'results')
+  useEffect(() => {
+    if (mode !== 'results') return;
+    setResultsLoading(true);
+    getMatchsJoues(sport ?? undefined)
+      .then(setResults)
+      .finally(() => setResultsLoading(false));
+  }, [mode, sport]);
 
-  // useMemo prevents new element references on every render.
-  // Without this, SectionList treats the header as a new component each time
-  // and remounts it → visible scroll jump whenever any state changes.
+  const isLoading = mode === 'upcoming' ? loading : resultsLoading;
+  const displayMatchs = mode === 'upcoming' ? matchs : results;
+  const count = displayMatchs.length;
+
   const ListHeader = useMemo(() => (
     <View>
       <SafeAreaView edges={['top']}>
         <View style={styles.header}>
           <View style={styles.headerText}>
             <Text style={styles.eyebrow}>
-              {sport ? `${totalCount} MATCH${totalCount !== 1 ? 'S' : ''}` : 'PROXISPORT'}
+              {sport
+                ? `${count} ${mode === 'results' ? 'RÉSULTAT' : 'MATCH'}${count !== 1 ? 'S' : ''}`
+                : 'PROXISPORT'}
             </Text>
             <Text style={styles.title}>
-              Matchs{' '}
+              {mode === 'results' ? 'Résultats' : 'Matchs'}{' '}
               <Text style={{ color: accent }}>près de vous</Text>
             </Text>
           </View>
@@ -100,23 +108,41 @@ export default function MatchsScreen() {
         </View>
       </SafeAreaView>
 
-      {/* Step 1 — Sport */}
+      {/* Mode toggle */}
+      <View style={styles.modeRow}>
+        {(['upcoming', 'results'] as Mode[]).map(m => (
+          <TouchableOpacity
+            key={m}
+            style={[styles.modeBtn, mode === m && { backgroundColor: accent }]}
+            onPress={() => setMode(m)}
+            activeOpacity={0.8}
+          >
+            <Text style={[styles.modeBtnText, mode === m && styles.modeBtnActive]}>
+              {m === 'upcoming' ? 'À venir' : 'Résultats'}
+            </Text>
+          </TouchableOpacity>
+        ))}
+      </View>
+
+      {/* Sport selector — shared */}
       <SportSelector selected={sport} onSelect={setSport} />
 
-      {/* Step 2 — Région + Division (combined Affiner row) */}
-      <AffinerFilter disabled={!sport} />
-
-      {/* Step 3 — Date */}
-      <DateFilter selected={date} onSelect={setDate} disabled={!sport} />
+      {/* Upcoming-only filters */}
+      {mode === 'upcoming' && (
+        <>
+          <AffinerFilter disabled={!sport} />
+          <DateFilter selected={date} onSelect={setDate} disabled={!sport} />
+        </>
+      )}
 
       <View style={styles.divider} />
 
-      {loading && <ActivityIndicator style={styles.loader} color={accent} size="large" />}
+      {isLoading && <ActivityIndicator style={styles.loader} color={accent} size="large" />}
     </View>
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  ), [sport, regions, divisions, date, totalCount, accent, loading, styles, isDark, toggleTheme, colors]);
+  ), [mode, sport, regions, divisions, date, count, accent, isLoading, styles, isDark, toggleTheme, colors]);
 
-  const ListEmpty = useMemo(() => !loading ? (
+  const ListEmpty = useMemo(() => !isLoading ? (
     !sport ? (
       <EmptyState
         colors={colors}
@@ -124,22 +150,24 @@ export default function MatchsScreen() {
         title="Choisissez un sport"
         body="Sélectionnez un sport pour voir les matchs proches de vous."
       />
-    ) : (
+    ) : count === 0 ? (
       <EmptyState
         colors={colors}
-        title="Aucun match trouvé"
-        body="Essayez une autre date, région ou division."
+        title={mode === 'results' ? 'Aucun résultat' : 'Aucun match trouvé'}
+        body={mode === 'results'
+          ? 'Aucun match terminé trouvé pour ce sport.'
+          : 'Essayez une autre date, région ou division.'}
       />
-    )
+    ) : null
   ) : null,
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  [loading, sport, colors]);
+  [isLoading, mode, sport, count, colors]);
 
   return (
     <View style={styles.root}>
       <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} backgroundColor={colors.bgApp} />
       <MatchGroupList
-        matchs={matchs}
+        matchs={displayMatchs}
         terrains={terrains}
         listHeader={ListHeader}
         listEmpty={ListEmpty}
@@ -225,6 +253,29 @@ function makeStyles(colors: ColorPalette) {
       color: colors.textPrimary,
       letterSpacing: 0.4,
       lineHeight: 36,
+    },
+    modeRow: {
+      flexDirection: 'row',
+      marginHorizontal: 16,
+      marginBottom: 10,
+      backgroundColor: colors.bgInput,
+      borderRadius: 10,
+      padding: 3,
+      gap: 3,
+    },
+    modeBtn: {
+      flex: 1,
+      paddingVertical: 7,
+      borderRadius: 8,
+      alignItems: 'center',
+    },
+    modeBtnText: {
+      fontSize: 13,
+      fontWeight: '600',
+      color: colors.textMuted,
+    },
+    modeBtnActive: {
+      color: '#ffffff',
     },
     divider: {
       height: 1,

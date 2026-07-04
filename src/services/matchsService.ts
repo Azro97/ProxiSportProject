@@ -183,3 +183,34 @@ export async function getMatchsByEquipe(equipeId: string): Promise<Match[]> {
   }
   return matches.sort((a, b) => b.dateHeure.getTime() - a.dateHeure.getTime());
 }
+
+/**
+ * Past (played) matches, sorted most recent first.
+ * Both sport and equipeId are optional — omit to get all results.
+ */
+export async function getMatchsJoues(sport?: string, equipeId?: string): Promise<Match[]> {
+  const now = new Date();
+  if (USE_MOCK) {
+    let results = getFreshMockMatches().filter(m => m.dateHeure < now);
+    if (sport)    results = results.filter(m => m.sport === sport);
+    if (equipeId) results = results.filter(m => m.equipeA_id === equipeId || m.equipeB_id === equipeId);
+    return results.sort((a, b) => b.dateHeure.getTime() - a.dateHeure.getTime());
+  }
+
+  const firestore = (await import('@react-native-firebase/firestore')).default;
+  type FSQuery = FirebaseFirestoreTypes.Query<FirebaseFirestoreTypes.DocumentData>;
+  let query: FSQuery = firestore().collection('matchs') as FSQuery;
+  query = query.where('dateHeure', '<', firestore.Timestamp.fromDate(now));
+  if (sport) query = query.where('sport', '==', sport);
+  const snapshot = await query.orderBy('dateHeure', 'desc').get();
+  const all = snapshot.docs.map(doc => {
+    const data = doc.data();
+    return {
+      ...data,
+      id: doc.id,
+      dateHeure: (data.dateHeure as FirebaseFirestoreTypes.Timestamp).toDate(),
+    } as Match;
+  });
+  if (!equipeId) return all;
+  return all.filter(m => m.equipeA_id === equipeId || m.equipeB_id === equipeId);
+}
