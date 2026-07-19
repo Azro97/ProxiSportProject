@@ -66,6 +66,12 @@ jobs:
 
       - name: Install CocoaPods dependencies
         working-directory: ios
+        # maplibre-react-native wraps the MapLibre Native SDK, which is
+        # distributed as an XCFramework that doesn't support static-library
+        # linkage ("Module 'MapLibre' not found" otherwise). The Podfile
+        # already calls use_frameworks! when USE_FRAMEWORKS is set.
+        env:
+          USE_FRAMEWORKS: static
         run: pod install
 
       - name: Build for iOS Simulator
