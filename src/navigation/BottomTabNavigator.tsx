@@ -18,20 +18,26 @@ export default function BottomTabNavigator() {
   return (
     <Tab.Navigator
       screenOptions={({ route }) => ({
-        tabBarActiveTintColor: colors.textSecondary,
-        tabBarInactiveTintColor: colors.textMuted,
+        tabBarActiveTintColor: '#111827',
+        tabBarInactiveTintColor: '#9ca3af',
         tabBarStyle: {
-          backgroundColor: colors.bgCard,
+          backgroundColor: '#ffffff',
           borderTopWidth: 1,
-          borderTopColor: colors.borderHairline,
-          elevation: 0,
-          height: 60 + insets.bottom,
-          paddingBottom: insets.bottom || 8,
+          borderTopColor: '#e5e7eb',
+          elevation: 8,
+          shadowColor: '#000',
+          shadowOffset: { width: 0, height: -2 },
+          shadowOpacity: 0.06,
+          shadowRadius: 8,
+          paddingBottom: insets.bottom > 0 ? insets.bottom : 6,
+          paddingTop: 6,
+          height: 54 + (insets.bottom > 0 ? insets.bottom : 0),
         },
         tabBarLabelStyle: {
           fontSize: 10,
-          letterSpacing: 0.5,
+          letterSpacing: 0.4,
           fontWeight: '600',
+          marginTop: 2,
         },
         headerShown: false,
         tabBarIcon: ({ color, size }) => {
