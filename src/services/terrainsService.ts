@@ -1,11 +1,7 @@
 // src/services/terrainsService.ts
 
 import { Terrain } from '../models/Terrain';
-import { haversineDistance } from '../utils/geo';
 import { supabase } from './supabase';
-import { MOCK_TERRAINS } from './mock/mockData';
-
-const USE_MOCK = false; // cut over to Supabase — see supabase/policies.sql (nearby_terrains)
 
 function toTerrain(row: any): Terrain {
   return {
@@ -23,11 +19,6 @@ export async function getTerrainsByLocation(
   lng: number,
   rayonKm: number,
 ): Promise<Terrain[]> {
-  if (USE_MOCK) {
-    // Geographic radius filter is client-side (Haversine) — see CLAUDE.md §6
-    return MOCK_TERRAINS.filter(t => haversineDistance(lat, lng, t.lat, t.lng) <= rayonKm);
-  }
-
   // Indexed radius search via PostGIS — see supabase/policies.sql (nearby_terrains)
   const { data, error } = await supabase.rpc('nearby_terrains', {
     in_lat: lat,
@@ -39,10 +30,6 @@ export async function getTerrainsByLocation(
 }
 
 export async function getTerrainById(id: string): Promise<Terrain | null> {
-  if (USE_MOCK) {
-    return MOCK_TERRAINS.find(t => t.id === id) ?? null;
-  }
-
   const { data, error } = await supabase
     .from('terrains')
     .select('id, nom, adresse, ville, lat, lng')

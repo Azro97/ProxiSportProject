@@ -101,7 +101,7 @@ cd android
 | Safe area | All screens use `useSafeAreaInsets` or `SafeAreaView` from `react-native-safe-area-context` |
 | Tab bar safe area | `height: 60 + insets.bottom` — gesture nav phones handled |
 | GPS intro screen | First-launch onboarding with animated dot, "Autoriser" / "Passer", persisted via AsyncStorage |
-| Backend: Supabase | Migrated off Firebase Firestore entirely — see "Backend migration" section above. All 4 services live on Supabase (`USE_MOCK = false`). |
+| Backend: Supabase | Migrated off Firebase Firestore entirely — see "Backend migration" section above. All 4 services live on Supabase; no mock data path remains anywhere in the app. |
 
 ## TODO — Remaining work
 
@@ -120,7 +120,7 @@ cd android
 
 ### Before production
 
-- [x] Switch off mock data — done, all 4 services run on Supabase (`USE_MOCK = false`), see "Backend migration" above
+- [x] Switch off mock data — done; `USE_MOCK` flags and `src/services/mock/mockData.ts` have since been removed entirely, see "Backend migration" above
 - [ ] Full on-device emulator pass of the Supabase cutover (Carte, Matchs, Résultats, team search, tournaments, admin flow, registration) — blocked on a Windows long-path restart, not yet re-verified visually
 - [ ] Algolia integration for team search (see §1 in "Before deploying to production" below) — still relevant on Supabase; `searchEquipes` now does a real server-side `ilike` instead of Firestore's full-fetch-then-filter, which is fine at current scale (70 équipes) but Algolia is still the right call at real-world scale
 - [ ] App icons + splash screen (both platforms)
@@ -146,12 +146,12 @@ The app **no longer uses Firebase**. `@react-native-firebase/app` and `@react-na
 - **`create_inscription(...)`** RPC replaces the old bare insert for `createInscription` — inserts the row **and** increments `tournois.equipes_inscrites` atomically in one transaction. This also fixed a real pre-existing bug: the old Firestore "prod" code path never incremented that counter (only the mock branch did).
 - Also fixed while rewriting: `getTournois(sport, region)`'s Firestore "prod" branch never actually applied the `sport`/`region` filters (only the mock branch did) — the Supabase version does.
 - **RLS**: the app has no end-user auth (same as before), so policies are public-read on every table, insert-only (no update/delete) on `tournois` and via the RPC on `inscriptions`. The anon key is safe to ship client-side — its authority is fully bounded by these policies. The `service_role`/secret key is **never** used by the app, only for one-off admin/seed operations run manually against the project.
-- `getRegions()` / `getDepartements()` in `matchsService.ts` **stay synchronous** (`string[]`, not `Promise`) and keep serving the hardcoded `MOCK_REGIONS`/`MOCK_DEPARTEMENTS` constants regardless of `USE_MOCK` — French administrative regions are static enough to treat as app config, and making them async would have broken every screen calling them without `await`.
-- `USE_MOCK` stays as a per-file toggle (not removed) — each of the 4 services can independently flip back to `true` if its Supabase path ever misbehaves, with zero blast radius on the others.
 - Supabase CLI installed as a devDependency (`npm install supabase --save-dev`, invoked via `npx supabase`) — global install isn't supported by the CLI.
 - Live project: schema/policies/seed already applied and verified (row counts, `nearby_terrains`, `create_inscription` atomicity, the composite `getMatchs` filter, and `createTournoi` all directly tested against the live database).
 
 **Status as of this write-up:** all 4 services have `USE_MOCK = false` and are verified working against the live Supabase project via direct API/client testing. Full on-device emulator verification (Carte markers, Matchs list/results, team search, tournament list/detail, registration, admin tournament creation) is still pending — blocked on an unrelated pre-existing Windows native-build issue (see below), waiting on a PC restart to clear.
+
+**Update (2026-07-19, later same day) — mock data removed entirely:** the `USE_MOCK` flag and every `if (USE_MOCK) {...}` fallback branch were deleted from all 4 services; `src/services/mock/mockData.ts` no longer exists. This includes `getRegions()` / `getDepartements()` in `matchsService.ts`, previously the one deliberate exception (documented above as staying synchronous and mock-backed) — they're now `async` functions backed by the `regions`/`departements` Postgres tables (already present in `schema.sql` and fully seeded in `seed.sql`, mirroring the old mock arrays exactly), with an in-memory cache since the data never changes at runtime. Both call sites (`AffinerFilter.tsx`, `AdminCreateTournoiScreen.tsx`) were updated to `await` them via `useEffect`/`useState` instead of reading synchronously. `AdminCreateTournoiScreen.tsx` also had its own direct `MOCK_REGIONS`/`MOCK_DEPARTEMENTS` imports (a second, previously undocumented consumer of the mock arrays) migrated to the same async service functions. The app now has zero mock data paths — everything reads from Supabase.
 
 ## Map — MapLibre GL
 
@@ -196,7 +196,7 @@ Unlike Firestore, **Postgres/Supabase doesn't bill per-row-read** — the `getAl
 - [x] Create a Supabase project (region: Frankfurt/`eu-central-1` or London/`eu-west-2` for lowest latency to France)
 - [x] Run, in order: `supabase/schema.sql` → `supabase/policies.sql` → `supabase/seed.sql` (Supabase Studio SQL editor, or `npx supabase` CLI)
 - [x] Set `SUPABASE_URL` / `SUPABASE_ANON_KEY` in `.env` (gitignored; `.env.example` has the placeholder shape) — the anon key is safe to ship, RLS bounds its authority
-- [x] Set `USE_MOCK = false` in all 4 service files
+- [x] Set `USE_MOCK = false` in all 4 service files — later removed entirely, see "Backend migration" above
 - [ ] Never put the `service_role`/secret key in `.env` or anywhere in the app — it's only used for one-off manual admin/seed operations against the project, never at runtime
 
 ### 3. iOS — first-time setup
@@ -212,7 +212,7 @@ iOS has never been built for this project. Steps needed:
 ### 4. Release checklist (both platforms)
 
 - [ ] Algolia (or `pg_trgm`) integration done, if team count has grown enough to warrant it (see §1 above)
-- [x] Real Supabase data populated and `USE_MOCK = false` — done, see "Backend migration" above
+- [x] Real Supabase data populated and mock data path removed entirely — done, see "Backend migration" above
 - [ ] Generate Android `release.keystore` (see "Release / Deploy to Android" section above)
 - [ ] `reactNativeArchitectures=armeabi-v7a,arm64-v8a,x86,x86_64` restored in `gradle.properties`
 - [ ] iOS provisioning profile + signing configured in Xcode

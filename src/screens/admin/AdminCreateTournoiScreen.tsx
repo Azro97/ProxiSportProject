@@ -1,6 +1,6 @@
 // src/screens/admin/AdminCreateTournoiScreen.tsx
 
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   View, Text, ScrollView, Modal, FlatList,
   TouchableOpacity, TouchableWithoutFeedback, StatusBar, ActivityIndicator,
@@ -13,7 +13,7 @@ import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AdminStackParamList } from '../../types';
 import { createTournoi } from '../../services/tournoiService';
-import { MOCK_REGIONS, MOCK_DEPARTEMENTS } from '../../services/mock/mockData';
+import { getRegions, getDepartements } from '../../services/matchsService';
 import { sportColors } from '../../theme';
 import { useColors } from '../../hooks/useColors';
 import SectionTitle from '../../components/SectionTitle';
@@ -61,8 +61,31 @@ export default function AdminCreateTournoiScreen({ navigation }: Props) {
   const [description, setDesc]    = useState('');
   const [ville, setVille]         = useState('');
   const [terrainNom, setTerrain]  = useState('');
-  const [region, setRegion]       = useState(MOCK_REGIONS[0]);
-  const [dept, setDept]           = useState(MOCK_DEPARTEMENTS[MOCK_REGIONS[0]][0]);
+  const [regions, setRegions]     = useState<string[]>([]);
+  const [departements, setDepartements] = useState<string[]>([]);
+  const [region, setRegion]       = useState('');
+  const [dept, setDept]           = useState('');
+
+  useEffect(() => {
+    let alive = true;
+    getRegions().then(list => {
+      if (!alive) return;
+      setRegions(list);
+      setRegion(prev => prev || list[0] || '');
+    });
+    return () => { alive = false; };
+  }, []);
+
+  useEffect(() => {
+    if (!region) return;
+    let alive = true;
+    getDepartements(region).then(list => {
+      if (!alive) return;
+      setDepartements(list);
+      setDept(prev => (list.includes(prev) ? prev : list[0] ?? ''));
+    });
+    return () => { alive = false; };
+  }, [region]);
 
   // Step 2 fields
   const [dateDebut, setDateDebut]   = useState<Date | null>(null);
@@ -432,7 +455,7 @@ export default function AdminCreateTournoiScreen({ navigation }: Props) {
             {modalPicker === 'region' ? 'Choisir une région' : 'Choisir un département'}
           </Text>
           <FlatList
-            data={modalPicker === 'region' ? MOCK_REGIONS : (MOCK_DEPARTEMENTS[region] ?? [])}
+            data={modalPicker === 'region' ? regions : departements}
             keyExtractor={item => item}
             renderItem={({ item }) => {
               const selected = modalPicker === 'region' ? item === region : item === dept;
@@ -442,7 +465,6 @@ export default function AdminCreateTournoiScreen({ navigation }: Props) {
                   onPress={() => {
                     if (modalPicker === 'region') {
                       setRegion(item);
-                      setDept(MOCK_DEPARTEMENTS[item][0]);
                     } else {
                       setDept(item);
                     }

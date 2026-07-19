@@ -3,9 +3,6 @@
 import { Tournoi } from '../models/Tournoi';
 import { Inscription } from '../models/Inscription';
 import { supabase } from './supabase';
-import { MOCK_TOURNOIS, MOCK_INSCRIPTIONS } from './mock/mockData';
-
-const USE_MOCK = false; // cut over to Supabase
 
 function toTournoi(row: any): Tournoi {
   return {
@@ -49,13 +46,6 @@ function toInscription(row: any): Inscription {
 }
 
 export async function getTournois(sport?: string | null, region?: string | null): Promise<Tournoi[]> {
-  if (USE_MOCK) {
-    let list = [...MOCK_TOURNOIS];
-    if (sport)  list = list.filter(t => t.sport === sport);
-    if (region) list = list.filter(t => t.region === region);
-    return list.sort((a, b) => a.dateDebut.getTime() - b.dateDebut.getTime());
-  }
-
   let query = supabase.from('tournois').select('*');
   if (sport)  query = query.eq('sport', sport);
   if (region) query = query.eq('region', region);
@@ -65,8 +55,6 @@ export async function getTournois(sport?: string | null, region?: string | null)
 }
 
 export async function getTournoiById(id: string): Promise<Tournoi | null> {
-  if (USE_MOCK) return MOCK_TOURNOIS.find(t => t.id === id) ?? null;
-
   const { data, error } = await supabase.from('tournois').select('*').eq('id', id).maybeSingle();
   if (error) throw error;
   return data ? toTournoi(data) : null;
@@ -74,11 +62,6 @@ export async function getTournoiById(id: string): Promise<Tournoi | null> {
 
 /** Get all inscriptions for a given tournament */
 export async function getInscriptionsByTournoi(tournoiId: string): Promise<Inscription[]> {
-  if (USE_MOCK) {
-    return MOCK_INSCRIPTIONS.filter(i => i.tournoi_id === tournoiId)
-      .sort((a, b) => b.dateInscription.getTime() - a.dateInscription.getTime());
-  }
-
   const { data, error } = await supabase
     .from('inscriptions')
     .select('*')
@@ -88,14 +71,8 @@ export async function getInscriptionsByTournoi(tournoiId: string): Promise<Inscr
   return (data ?? []).map(toInscription);
 }
 
-/** Add a new tournament (mock: push in-memory; prod: insert into Supabase) */
+/** Add a new tournament */
 export async function createTournoi(data: Omit<Tournoi, 'id' | 'equipesInscrites'>): Promise<string> {
-  if (USE_MOCK) {
-    const id = 'to_' + Date.now();
-    MOCK_TOURNOIS.push({ ...data, id, equipesInscrites: 0 });
-    return id;
-  }
-
   const id = 'to_' + Date.now();
   const { error } = await supabase.from('tournois').insert({
     id,
@@ -134,7 +111,7 @@ export function formatPrix(centimes: number): string {
   });
 }
 
-/** Register a team to a tournament (mock: push in-memory; prod: atomic RPC — see supabase/policies.sql) */
+/** Register a team to a tournament (atomic RPC — see supabase/policies.sql) */
 export async function createInscription(data: {
   tournoi_id: string;
   equipe_nom: string;
@@ -142,26 +119,6 @@ export async function createInscription(data: {
   membres: string[];
   montant_payé: number;
 }): Promise<string> {
-  if (USE_MOCK) {
-    const id = 'ins_' + Date.now();
-    MOCK_INSCRIPTIONS.push({
-      id,
-      tournoi_id: data.tournoi_id,
-      equipe_id: 'eq_' + Date.now(),
-      equipe_nom: data.equipe_nom,
-      capitaine_uid: 'user_mock',
-      capitaine_email: data.capitaine_email,
-      membres: data.membres,
-      dateInscription: new Date(),
-      statut: 'confirmée',
-      montant_payé: data.montant_payé,
-    });
-    // increment equipesInscrites on the tournament
-    const t = MOCK_TOURNOIS.find(t => t.id === data.tournoi_id);
-    if (t) t.equipesInscrites = (t.equipesInscrites ?? 0) + 1;
-    return id;
-  }
-
   // create_inscription() inserts the row AND increments tournois.equipes_inscrites
   // atomically in one transaction — see supabase/policies.sql.
   const { data: id, error } = await supabase.rpc('create_inscription', {

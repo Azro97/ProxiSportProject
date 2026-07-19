@@ -6,7 +6,7 @@
 //   • Tap chevron    → expand / collapse sub-levels
 //   • Tap sub-level  → toggle that specific level only
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   View,
   Text,
@@ -48,9 +48,15 @@ export default function AffinerFilter({ disabled = false }: { disabled?: boolean
   } = useFiltresStore();
   const [open, setOpen] = useState<Sheet>(null);
   const [expandedGroupe, setExpandedGroupe] = useState<DivisionGroupe | null>(null);
+  const [allRegions, setAllRegions] = useState<string[]>([]);
+
+  useEffect(() => {
+    let alive = true;
+    getRegions().then(regions => { if (alive) setAllRegions(regions); });
+    return () => { alive = false; };
+  }, []);
 
   const accent = sport ? sportColors[sport] : colors.textPrimary;
-  const allRegions = getRegions();
 
   const regionLabel =
     regions.length === 0 ? 'Tous'
