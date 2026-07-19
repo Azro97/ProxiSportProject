@@ -95,9 +95,16 @@ jobs:
         # the scheme itself what's actually installed on this runner and
         # target a concrete device by id, rather than guess a name that
         # may not exist on a given Xcode/runner image.
+        #
+        # Real destination lines look like:
+        #   { platform:iOS Simulator, arch:arm64, id:XXXX-..., OS:26.0.1, name:iPhone 17 }
+        # The placeholder line ("Any iOS Simulator Device") has no OS field
+        # and a non-hex id, so filtering for a line with both "platform:iOS
+        # Simulator" and "OS:" reliably skips it and lands on a real device.
         run: |
           xcodebuild -showdestinations -workspace PP.xcworkspace -scheme PP -configuration Debug 2>&1 | tee destinations.txt
-          SIM_ID=$(grep -o 'platform:iOS Simulator, id:[A-F0-9-]*' destinations.txt | head -n1 | sed 's/.*id://')
+          SIM_LINE=$(grep 'platform:iOS Simulator' destinations.txt | grep 'OS:' | head -n1)
+          SIM_ID=$(echo "$SIM_LINE" | sed -E 's/.*id:([0-9A-Fa-f-]+),.*/\1/')
           if [ -z "$SIM_ID" ]; then
             echo "No iOS Simulator destination found on this runner"
             exit 1
