@@ -1,0 +1,60 @@
+name: iOS Build
+
+# Builds the app for the iOS Simulator on a macOS runner. This is a Debug,
+# unsigned build (CODE_SIGNING_ALLOWED=NO) so it needs no Apple Developer
+# account, certificates, or provisioning profiles - it only proves the
+# native iOS project and all pods still compile. A signed device/App Store
+# build is a separate, later step once there's a Developer account and
+# signing secrets to work with.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "ios/**"
+      - "src/**"
+      - "package.json"
+      - "package-lock.json"
+      - "patches/**"
+      - ".github/workflows/ios-build.yml"
+  pull_request:
+    branches: [main]
+  workflow_dispatch: {}
+
+jobs:
+  build-simulator:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install JS dependencies
+        run: npm ci
+
+      - name: Write .env
+        # Falls back to placeholder values so the build succeeds even
+        # without SUPABASE_URL/SUPABASE_ANON_KEY secrets configured - this
+        # job only checks that the app compiles, not that it talks to a
+        # real Supabase project.
+        run: |
+          echo "SUPABASE_URL=${{ secrets.SUPABASE_URL || 'https://placeholder.supabase.co' }}" >> .env
+          echo "SUPABASE_ANON_KEY=${{ secrets.SUPABASE_ANON_KEY || 'placeholder-anon-key' }}" >> .env
+
+      - name: Install CocoaPods dependencies
+        working-directory: ios
+        run: pod install
+
+      - name: Build for iOS Simulator
+        working-directory: ios
+        run: |
+          xcodebuild build \
+            -workspace PP.xcworkspace \
+            -scheme PP \
+            -configuration Debug \
+            -sdk iphonesimulator \
+            -destination 'generic/platform=iOS Simulator' \
+            CODE_SIGNING_ALLOWED=NO

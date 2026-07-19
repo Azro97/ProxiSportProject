@@ -1,6 +1,7 @@
-diff --git a/common/cpp/react/renderer/components/rnsvg/RNSVGLayoutableShadowNode.cpp b/common/cpp/react/renderer/components/rnsvg/RNSVGLayoutableShadowNode.cpp
---- a/common/cpp/react/renderer/components/rnsvg/RNSVGLayoutableShadowNode.cpp
-+++ b/common/cpp/react/renderer/components/rnsvg/RNSVGLayoutableShadowNode.cpp
+diff --git a/node_modules/react-native-svg/common/cpp/react/renderer/components/rnsvg/RNSVGLayoutableShadowNode.cpp b/node_modules/react-native-svg/common/cpp/react/renderer/components/rnsvg/RNSVGLayoutableShadowNode.cpp
+index e0341ec..ded9989 100644
+--- a/node_modules/react-native-svg/common/cpp/react/renderer/components/rnsvg/RNSVGLayoutableShadowNode.cpp
++++ b/node_modules/react-native-svg/common/cpp/react/renderer/components/rnsvg/RNSVGLayoutableShadowNode.cpp
 @@ -28,8 +28,8 @@ void RNSVGLayoutableShadowNode::updatePosition() {
    auto style = yogaNode_.style();
    style.setPositionType(yoga::PositionType::Absolute);
@@ -11,3 +12,4 @@ diff --git a/common/cpp/react/renderer/components/rnsvg/RNSVGLayoutableShadowNod
 +  style.setDimension(yoga::Dimension::Height, yoga::StyleLength::percent(100));
    yogaNode_.setStyle(style);
  }
+ 
