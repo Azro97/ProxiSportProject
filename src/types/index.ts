@@ -8,6 +8,14 @@ export type RootStackParamList = {
   TeamDetail: { equipeId: string };
   TournoiDetail: { tournoiId: string };
   RechercheEquipes: undefined;
+  AdminLogin: undefined;
+  AdminMain: undefined;
+};
+
+export type AdminStackParamList = {
+  AdminDashboard: undefined;
+  AdminTournoiDetail: { tournoiId: string };
+  AdminCreateTournoi: undefined;
 };
 
 export type BottomTabParamList = {

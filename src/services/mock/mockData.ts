@@ -6,6 +6,7 @@ import { Terrain } from '../../models/Terrain';
 import { Match } from '../../models/Match';
 import { Equipe } from '../../models/Equipe';
 import { Tournoi } from '../../models/Tournoi';
+import { Inscription } from '../../models/Inscription';
 
 export const MOCK_REGIONS = [
   'Île-de-France',
@@ -13,6 +14,7 @@ export const MOCK_REGIONS = [
   'Auvergne-Rhône-Alpes',
   'Bretagne',
   'PACA',
+  'Hauts-de-France',
 ];
 
 export const MOCK_DEPARTEMENTS: Record<string, string[]> = {
@@ -21,6 +23,7 @@ export const MOCK_DEPARTEMENTS: Record<string, string[]> = {
   'Auvergne-Rhône-Alpes': ['Rhône (69)', 'Isère (38)', 'Ain (01)', 'Savoie (73)'],
   'Bretagne': ['Finistère (29)', 'Ille-et-Vilaine (35)', 'Morbihan (56)', "Côtes-d'Armor (22)"],
   'PACA': ['Bouches-du-Rhône (13)', 'Var (83)', 'Alpes-Maritimes (06)'],
+  'Hauts-de-France': ['Nord (59)', 'Pas-de-Calais (62)', 'Somme (80)', 'Aisne (02)'],
 };
 
 export const MOCK_TERRAINS: Terrain[] = [
@@ -191,6 +194,47 @@ export const MOCK_TERRAINS: Terrain[] = [
     ville: 'Versailles',
     lat: 48.7921,
     lng: 2.1281,
+  },
+  // ── Lille / Hauts-de-France ─────────────────────────────────────────────────
+  {
+    id: 't22',
+    nom: 'Complexe Sportif Caulier',
+    adresse: '1 Rue Caulier',
+    ville: 'Lille',
+    lat: 50.6292,
+    lng: 3.0573,
+  },
+  {
+    id: 't23',
+    nom: 'Salle Omnisports Porte de Valenciennes',
+    adresse: '56 Rue de Valenciennes',
+    ville: 'Lille',
+    lat: 50.6194,
+    lng: 3.0831,
+  },
+  {
+    id: 't24',
+    nom: 'Gymnase Université de Lille',
+    adresse: '59 Avenue Paul Langevin',
+    ville: 'Villeneuve-d\'Ascq',
+    lat: 50.6067,
+    lng: 3.1300,
+  },
+  {
+    id: 't25',
+    nom: 'Salle des Sports de Roubaix',
+    adresse: '35 Avenue Alfred Motte',
+    ville: 'Roubaix',
+    lat: 50.6905,
+    lng: 3.1757,
+  },
+  {
+    id: 't26',
+    nom: 'Gymnase de Tourcoing',
+    adresse: '1 Allée du Stade',
+    ville: 'Tourcoing',
+    lat: 50.7221,
+    lng: 3.1606,
   },
 ];
 
@@ -567,6 +611,153 @@ const makeMockMatches = (): Match[] => [
     departement: 'Var (83)',
   },
 
+  // ── Hauts-de-France — Volley Lille ─────────────────────────────────────────
+  {
+    id: 'ml1',
+    sport: 'volley',
+    equipeA_id: 'el1', equipeA_nom: 'Lille VBC',
+    equipeB_id: 'el2', equipeB_nom: 'Roubaix VB',
+    terrain_id: 't22',
+    dateHeure: d(0, 20, 0),
+    division: 'Régionale 1',
+    region: 'Hauts-de-France',
+    departement: 'Nord (59)',
+  },
+  {
+    id: 'ml2',
+    sport: 'volley',
+    equipeA_id: 'el3', equipeA_nom: 'Tourcoing VB',
+    equipeB_id: 'el4', equipeB_nom: 'Villeneuve VB',
+    terrain_id: 't26',
+    dateHeure: d(0, 18, 30),
+    division: 'Régionale 1',
+    region: 'Hauts-de-France',
+    departement: 'Nord (59)',
+  },
+  {
+    id: 'ml3',
+    sport: 'volley',
+    equipeA_id: 'el5', equipeA_nom: 'Flandres VB',
+    equipeB_id: 'el1', equipeB_nom: 'Lille VBC',
+    terrain_id: 't23',
+    dateHeure: d(1, 19, 0),
+    division: 'Nationale 3',
+    region: 'Hauts-de-France',
+    departement: 'Nord (59)',
+  },
+  {
+    id: 'ml4',
+    sport: 'volley',
+    equipeA_id: 'el6', equipeA_nom: 'Lens VB',
+    equipeB_id: 'el7', equipeB_nom: 'Arras VB',
+    terrain_id: 't23',
+    dateHeure: d(2, 20, 0),
+    division: 'Régionale 2',
+    region: 'Hauts-de-France',
+    departement: 'Pas-de-Calais (62)',
+  },
+  {
+    id: 'ml5',
+    sport: 'volley',
+    equipeA_id: 'el2', equipeA_nom: 'Roubaix VB',
+    equipeB_id: 'el3', equipeB_nom: 'Tourcoing VB',
+    terrain_id: 't25',
+    dateHeure: d(3, 18, 0),
+    division: 'Régionale 1',
+    region: 'Hauts-de-France',
+    departement: 'Nord (59)',
+  },
+  {
+    id: 'ml6',
+    sport: 'volley',
+    equipeA_id: 'el4', equipeA_nom: 'Villeneuve VB',
+    equipeB_id: 'el8', equipeB_nom: 'Dunkerque VB',
+    terrain_id: 't24',
+    dateHeure: d(4, 20, 30),
+    division: 'Nationale 3',
+    region: 'Hauts-de-France',
+    departement: 'Nord (59)',
+  },
+  {
+    id: 'ml7',
+    sport: 'volley',
+    equipeA_id: 'el5', equipeA_nom: 'Flandres VB',
+    equipeB_id: 'el6', equipeB_nom: 'Lens VB',
+    terrain_id: 't22',
+    dateHeure: d(5, 19, 0),
+    division: 'Régionale 2',
+    region: 'Hauts-de-France',
+    departement: 'Nord (59)',
+  },
+  {
+    id: 'ml8',
+    sport: 'volley',
+    equipeA_id: 'el1', equipeA_nom: 'Lille VBC',
+    equipeB_id: 'el4', equipeB_nom: 'Villeneuve VB',
+    terrain_id: 't22',
+    dateHeure: d(7, 20, 0),
+    division: 'Nationale 3',
+    region: 'Hauts-de-France',
+    departement: 'Nord (59)',
+  },
+  // Past Lille volley
+  {
+    id: 'mlp1',
+    sport: 'volley',
+    equipeA_id: 'el1', equipeA_nom: 'Lille VBC',
+    equipeB_id: 'el3', equipeB_nom: 'Tourcoing VB',
+    terrain_id: 't22',
+    dateHeure: d(-7, 20, 0),
+    division: 'Nationale 3',
+    region: 'Hauts-de-France',
+    departement: 'Nord (59)',
+    statut: 'terminé',
+    scoreA: 3,
+    scoreB: 1,
+  },
+  {
+    id: 'mlp2',
+    sport: 'volley',
+    equipeA_id: 'el2', equipeA_nom: 'Roubaix VB',
+    equipeB_id: 'el5', equipeB_nom: 'Flandres VB',
+    terrain_id: 't25',
+    dateHeure: d(-5, 19, 0),
+    division: 'Régionale 1',
+    region: 'Hauts-de-France',
+    departement: 'Nord (59)',
+    statut: 'terminé',
+    scoreA: 2,
+    scoreB: 3,
+  },
+  {
+    id: 'mlp3',
+    sport: 'volley',
+    equipeA_id: 'el4', equipeA_nom: 'Villeneuve VB',
+    equipeB_id: 'el1', equipeB_nom: 'Lille VBC',
+    terrain_id: 't24',
+    dateHeure: d(-3, 20, 0),
+    division: 'Nationale 3',
+    region: 'Hauts-de-France',
+    departement: 'Nord (59)',
+    statut: 'terminé',
+    scoreA: 1,
+    scoreB: 3,
+  },
+  {
+    id: 'mlp4',
+    sport: 'volley',
+    equipeA_id: 'el7', equipeA_nom: 'Arras VB',
+    equipeB_id: 'el8', equipeB_nom: 'Dunkerque VB',
+    terrain_id: 't23',
+    dateHeure: d(-10, 18, 30),
+    division: 'Régionale 2',
+    region: 'Hauts-de-France',
+    departement: 'Nord (59)',
+    statut: 'terminé',
+    scoreA: 3,
+    scoreB: 2,
+  },
+
   // ── Past matches (negative offsets) ─────────────────────────────────────────
   {
     id: 'mp1',
@@ -780,6 +971,17 @@ export const MOCK_EQUIPES: Equipe[] = [
   { id: 'e58', nom: 'Nice HB',              sport: 'hand',   region: 'PACA',                   departement: 'Alpes-Maritimes (06)' },
   { id: 'e59', nom: 'Toulon VB',            sport: 'volley', region: 'PACA',                   departement: 'Var (83)' },
   { id: 'e60', nom: 'Cannes VB',            sport: 'volley', region: 'PACA',                   departement: 'Alpes-Maritimes (06)' },
+  // Hauts-de-France — Volley Lille
+  { id: 'el1', nom: 'Lille VBC',            sport: 'volley', region: 'Hauts-de-France',        departement: 'Nord (59)' },
+  { id: 'el2', nom: 'Roubaix VB',           sport: 'volley', region: 'Hauts-de-France',        departement: 'Nord (59)' },
+  { id: 'el3', nom: 'Tourcoing VB',         sport: 'volley', region: 'Hauts-de-France',        departement: 'Nord (59)' },
+  { id: 'el4', nom: 'Villeneuve VB',        sport: 'volley', region: 'Hauts-de-France',        departement: 'Nord (59)' },
+  { id: 'el5', nom: 'Flandres VB',          sport: 'volley', region: 'Hauts-de-France',        departement: 'Nord (59)' },
+  { id: 'el6', nom: 'Lens VB',              sport: 'volley', region: 'Hauts-de-France',        departement: 'Pas-de-Calais (62)' },
+  { id: 'el7', nom: 'Arras VB',             sport: 'volley', region: 'Hauts-de-France',        departement: 'Pas-de-Calais (62)' },
+  { id: 'el8', nom: 'Dunkerque VB',         sport: 'volley', region: 'Hauts-de-France',        departement: 'Nord (59)' },
+  { id: 'el9', nom: 'Métropole VB',         sport: 'volley', region: 'Hauts-de-France',        departement: 'Nord (59)' },
+  { id: 'el10',nom: 'Nord VBC',             sport: 'volley', region: 'Hauts-de-France',        departement: 'Nord (59)' },
 ];
 
 // ── Mock tournaments ───────────────────────────────────────────────────────────
@@ -791,6 +993,7 @@ const td = (offsetDays: number): Date => {
   return date;
 };
 
+// Mutable so admin can push new tournaments at runtime
 export const MOCK_TOURNOIS: Tournoi[] = [
   {
     id: 'to1',
@@ -924,4 +1127,154 @@ export const MOCK_TOURNOIS: Tournoi[] = [
     region: 'Auvergne-Rhône-Alpes',
     departement: 'Rhône (69)',
   },
+  // ── Lille Volley ───────────────────────────────────────────────────────────
+  {
+    id: 'tol1',
+    nom: 'Lille Summer Volley Cup',
+    sport: 'volley',
+    description: 'Le grand tournoi estival de volley-ball de la métropole lilloise. Format 6v6 indoor sur parquet. Arbitres officiels, trophées et médailles pour les 3 premières équipes. Ambiance garantie, buvette sur place toute la journée. Ouvert à tous les niveaux à partir de Régionale 2.',
+    photoUrl: 'https://images.unsplash.com/photo-1612872087720-bb876e2e67d1?w=900&auto=format',
+    terrain_id: 't22',
+    terrain_nom: 'Complexe Sportif Caulier',
+    terrain_ville: 'Lille',
+    organisateur_id: 'admin',
+    organisateur_nom: 'Lille VBC',
+    dateDebut: td(18),
+    dateFin: td(19),
+    dateClotureInscription: td(12),
+    prixInscription: 4500,
+    maxEquipes: 16,
+    equipesInscrites: 7,
+    tailleEquipe: 6,
+    statut: 'ouvert',
+    region: 'Hauts-de-France',
+    departement: 'Nord (59)',
+  },
+  {
+    id: 'tol2',
+    nom: 'Open Nord 4v4 — Beach Indoor',
+    sport: 'volley',
+    description: 'Tournoi de volley 4v4 en salle sur sable aménagé. Format rapide et dynamique. Catégories Homme / Femme / Mixte. Chaque équipe dispute minimum 4 matchs. DJ set et food trucks. Idéal pour les clubs cherchant un format compétitif et festif.',
+    photoUrl: 'https://images.unsplash.com/photo-1612872087720-bb876e2e67d1?w=900&auto=format',
+    terrain_id: 't23',
+    terrain_nom: 'Salle Omnisports Porte de Valenciennes',
+    terrain_ville: 'Lille',
+    organisateur_id: 'admin',
+    organisateur_nom: 'Flandres VB',
+    dateDebut: td(25),
+    dateFin: td(25),
+    dateClotureInscription: td(18),
+    prixInscription: 3000,
+    maxEquipes: 24,
+    equipesInscrites: 5,
+    tailleEquipe: 4,
+    statut: 'ouvert',
+    region: 'Hauts-de-France',
+    departement: 'Nord (59)',
+  },
+  {
+    id: 'tol3',
+    nom: 'Tournoi Inter-Clubs Hauts-de-France',
+    sport: 'volley',
+    description: 'Compétition officielle inter-clubs réunissant les meilleurs clubs de la région. 6v6, niveau Nationale 3 minimum. Retransmission en direct sur les réseaux sociaux. Trophée du champion régional + prime pour le vainqueur. Logistique complète assurée par les organisateurs.',
+    photoUrl: 'https://images.unsplash.com/photo-1612872087720-bb876e2e67d1?w=900&auto=format',
+    terrain_id: 't24',
+    terrain_nom: 'Gymnase Université de Lille',
+    terrain_ville: 'Villeneuve-d\'Ascq',
+    organisateur_id: 'admin',
+    organisateur_nom: 'Ligue HDF Volley',
+    dateDebut: td(35),
+    dateFin: td(36),
+    dateClotureInscription: td(28),
+    prixInscription: 6000,
+    maxEquipes: 12,
+    equipesInscrites: 3,
+    tailleEquipe: 6,
+    statut: 'ouvert',
+    region: 'Hauts-de-France',
+    departement: 'Nord (59)',
+  },
+  {
+    id: 'tol4',
+    nom: 'Tournoi 2v2 Beach Volley Lille',
+    sport: 'volley',
+    description: 'Premier tournoi de beach volley 2v2 en salle à Lille. Sable véritable importé, éclairage professionnel. Paires mixtes et hommes. Ambiance décontractée, tenue beach obligatoire. Accès vestiaires + douches inclus. Buvette et animations DJ.',
+    photoUrl: 'https://images.unsplash.com/photo-1612872087720-bb876e2e67d1?w=900&auto=format',
+    terrain_id: 't22',
+    terrain_nom: 'Complexe Sportif Caulier',
+    terrain_ville: 'Lille',
+    organisateur_id: 'admin',
+    organisateur_nom: 'Lille VBC',
+    dateDebut: td(5),
+    dateFin: td(5),
+    dateClotureInscription: td(2),
+    prixInscription: 2000,
+    maxEquipes: 32,
+    equipesInscrites: 32,
+    tailleEquipe: 2,
+    statut: 'complet',
+    region: 'Hauts-de-France',
+    departement: 'Nord (59)',
+  },
+];
+
+const dAgo = (days: number): Date => {
+  const d = new Date();
+  d.setDate(d.getDate() - days);
+  return d;
+};
+
+export const MOCK_INSCRIPTIONS: Inscription[] = [
+  // to1 — Tournoi de l'Été Parisien (11 équipes inscrites)
+  { id: 'ins1',  tournoi_id: 'to1', equipe_id: 'eq1',  equipe_nom: 'Les Invincibles',      capitaine_uid: 'u1', capitaine_email: 'kevin.m@gmail.com',   membres: ['Kevin M.', 'Sacha D.', 'Liam B.', 'Noah T.', 'Ethan R.'], dateInscription: dAgo(8),  statut: 'confirmée',              montant_payé: 4000 },
+  { id: 'ins2',  tournoi_id: 'to1', equipe_id: 'eq2',  equipe_nom: 'FC Belleville',          capitaine_uid: 'u2', capitaine_email: 'alexis.r@outlook.fr',  membres: ['Alexis R.', 'Julien C.', 'Mehdi A.', 'Rayan S.', 'Dylan P.'], dateInscription: dAgo(7),  statut: 'confirmée',              montant_payé: 4000 },
+  { id: 'ins3',  tournoi_id: 'to1', equipe_id: 'eq3',  equipe_nom: 'Red Stars',              capitaine_uid: 'u3', capitaine_email: 'omar.b@gmail.com',     membres: ['Omar B.', 'Karim L.', 'Youssef H.', 'Adam N.', 'Bilal Z.'],  dateInscription: dAgo(6),  statut: 'confirmée',              montant_payé: 4000 },
+  { id: 'ins4',  tournoi_id: 'to1', equipe_id: 'eq4',  equipe_nom: 'Stade 18',               capitaine_uid: 'u4', capitaine_email: 'pierre.l@gmail.com',   membres: ['Pierre L.', 'Antoine G.', 'Baptiste V.', 'Clément F.', 'Hugo M.'], dateInscription: dAgo(5), statut: 'confirmée',             montant_payé: 4000 },
+  { id: 'ins5',  tournoi_id: 'to1', equipe_id: 'eq5',  equipe_nom: 'Dream Team 75',          capitaine_uid: 'u5', capitaine_email: 'thomas.d@hotmail.fr',  membres: ['Thomas D.', 'Nicolas B.', 'Maxime C.', 'Quentin A.', 'Adrien S.'], dateInscription: dAgo(5), statut: 'confirmée',            montant_payé: 4000 },
+  { id: 'ins6',  tournoi_id: 'to1', equipe_id: 'eq6',  equipe_nom: 'Golden Boys',            capitaine_uid: 'u6', capitaine_email: 'ibrahim.d@gmail.com',  membres: ['Ibrahim D.', 'Sofiane K.', 'Amine B.', 'Hamza T.', 'Ismail R.'], dateInscription: dAgo(4),  statut: 'confirmée',             montant_payé: 4000 },
+  { id: 'ins7',  tournoi_id: 'to1', equipe_id: 'eq7',  equipe_nom: 'Street Force',           capitaine_uid: 'u7', capitaine_email: 'lucas.m@gmail.com',    membres: ['Lucas M.', 'Tom B.', 'Theo P.', 'Martin C.', 'Oscar V.'],  dateInscription: dAgo(4),  statut: 'confirmée',              montant_payé: 4000 },
+  { id: 'ins8',  tournoi_id: 'to1', equipe_id: 'eq8',  equipe_nom: 'Les Guerriers',          capitaine_uid: 'u8', capitaine_email: 'rachid.b@gmail.com',   membres: ['Rachid B.', 'Farid M.', 'Nassim O.', 'Walid S.', 'Moussa C.'], dateInscription: dAgo(3),  statut: 'confirmée',             montant_payé: 4000 },
+  { id: 'ins9',  tournoi_id: 'to1', equipe_id: 'eq9',  equipe_nom: 'Titan FC',               capitaine_uid: 'u9', capitaine_email: 'paul.v@gmail.com',     membres: ['Paul V.', 'Simon R.', 'Théo G.', 'Jules A.', 'Léo F.'],   dateInscription: dAgo(2),  statut: 'confirmée',              montant_payé: 4000 },
+  { id: 'ins10', tournoi_id: 'to1', equipe_id: 'eq10', equipe_nom: 'Phenix FC',              capitaine_uid: 'u10', capitaine_email: 'david.t@gmail.com',   membres: ['David T.', 'Yann B.', 'Remi C.', 'Florian M.', 'Axel P.'], dateInscription: dAgo(2),  statut: 'confirmée',              montant_payé: 4000 },
+  { id: 'ins11', tournoi_id: 'to1', equipe_id: 'eq11', equipe_nom: 'Rising Stars',           capitaine_uid: 'u11', capitaine_email: 'mehmet.k@gmail.com',  membres: ['Mehmet K.', 'Ali D.', 'Baran S.', 'Emre T.', 'Kerim Y.'],  dateInscription: dAgo(1),  statut: 'en_attente_paiement' },
+
+  // to2 — Summer Basket Cup (complet — 32 équipes, on met 4 exemples)
+  { id: 'ins20', tournoi_id: 'to2', equipe_id: 'bq1', equipe_nom: 'Slam Dunk Crew',         capitaine_uid: 'b1', capitaine_email: 'jordan.p@gmail.com',   membres: ['Jordan P.', 'Kyle M.', 'Darius B.'], dateInscription: dAgo(12), statut: 'confirmée', montant_payé: 2500 },
+  { id: 'ins21', tournoi_id: 'to2', equipe_id: 'bq2', equipe_nom: 'Alley-Oop',              capitaine_uid: 'b2', capitaine_email: 'marcus.j@gmail.com',   membres: ['Marcus J.', 'Terrell W.', 'Leon B.'],  dateInscription: dAgo(11), statut: 'confirmée', montant_payé: 2500 },
+  { id: 'ins22', tournoi_id: 'to2', equipe_id: 'bq3', equipe_nom: 'Swish Squad',             capitaine_uid: 'b3', capitaine_email: 'chris.n@outlook.fr',   membres: ['Chris N.', 'Dante V.', 'Elias K.'],    dateInscription: dAgo(10), statut: 'confirmée', montant_payé: 2500 },
+  { id: 'ins23', tournoi_id: 'to2', equipe_id: 'bq4', equipe_nom: '3-Point Factory',         capitaine_uid: 'b4', capitaine_email: 'yann.d@gmail.com',     membres: ['Yann D.', 'Kévin G.', 'Samir T.'],     dateInscription: dAgo(9),  statut: 'annulée' },
+
+  // to3 — Open Handball Montpellier (4 équipes inscrites)
+  { id: 'ins30', tournoi_id: 'to3', equipe_id: 'hq1', equipe_nom: 'Hérault Warriors',       capitaine_uid: 'h1', capitaine_email: 'fabien.r@gmail.com',   membres: ['Fabien R.', 'Nico S.', 'Adrien P.', 'Léo M.', 'Tom C.', 'Hugo B.', 'Romain V.'], dateInscription: dAgo(6), statut: 'confirmée', montant_payé: 5000 },
+  { id: 'ins31', tournoi_id: 'to3', equipe_id: 'hq2', equipe_nom: 'MHB Academy',             capitaine_uid: 'h2', capitaine_email: 'jb.dupont@gmail.com',  membres: ['Jean-Baptiste D.', 'Antoine F.', 'Maxime L.', 'Samuel B.', 'Raphaël C.', 'François M.', 'Julien T.'], dateInscription: dAgo(5), statut: 'confirmée', montant_payé: 5000 },
+  { id: 'ins32', tournoi_id: 'to3', equipe_id: 'hq3', equipe_nom: 'Gard Elite',              capitaine_uid: 'h3', capitaine_email: 'christophe.v@hotmail.fr', membres: ['Christophe V.', 'Philippe R.', 'Guillaume T.', 'Mathieu S.', 'Alexis D.', 'Cédric B.', 'Thibaut M.'], dateInscription: dAgo(4), statut: 'confirmée', montant_payé: 5000 },
+  { id: 'ins33', tournoi_id: 'to3', equipe_id: 'hq4', equipe_nom: 'Nîmes HBC',               capitaine_uid: 'h4', capitaine_email: 'stephane.m@gmail.com', membres: ['Stéphane M.', 'Laurent C.', 'Didier P.', 'Éric T.', 'Pascal R.', 'Bruno V.', 'Denis S.'],   dateInscription: dAgo(2), statut: 'en_attente_paiement' },
+
+  // tol4 — Beach Volley 2v2 Lille (complet — 5 paires exemple)
+  { id: 'insb1', tournoi_id: 'tol4', equipe_id: 'bl1', equipe_nom: 'Sable & Smash',          capitaine_uid: 'lb1', capitaine_email: 'theo.d@gmail.com',    membres: ['Théo D.', 'Lucas M.'],               dateInscription: dAgo(12), statut: 'confirmée',          montant_payé: 2000 },
+  { id: 'insb2', tournoi_id: 'tol4', equipe_id: 'bl2', equipe_nom: 'Block Party',             capitaine_uid: 'lb2', capitaine_email: 'sofia.r@gmail.com',   membres: ['Sofia R.', 'Camille B.'],            dateInscription: dAgo(11), statut: 'confirmée',          montant_payé: 2000 },
+  { id: 'insb3', tournoi_id: 'tol4', equipe_id: 'bl3', equipe_nom: 'Les Smasheuses',          capitaine_uid: 'lb3', capitaine_email: 'marine.v@gmail.com',  membres: ['Marine V.', 'Jade T.'],              dateInscription: dAgo(10), statut: 'confirmée',          montant_payé: 2000 },
+  { id: 'insb4', tournoi_id: 'tol4', equipe_id: 'bl4', equipe_nom: 'Dig or Die',              capitaine_uid: 'lb4', capitaine_email: 'romain.f@gmail.com',  membres: ['Romain F.', 'Maxence P.'],           dateInscription: dAgo(10), statut: 'confirmée',          montant_payé: 2000 },
+  { id: 'insb5', tournoi_id: 'tol4', equipe_id: 'bl5', equipe_nom: 'Set & Spike',             capitaine_uid: 'lb5', capitaine_email: 'julien.c@gmail.com',  membres: ['Julien C.', 'Baptiste L.'],          dateInscription: dAgo(9),  statut: 'confirmée',          montant_payé: 2000 },
+
+  // tol1 — Lille Summer Volley Cup 6v6 (7 équipes)
+  { id: 'insl1', tournoi_id: 'tol1', equipe_id: 'lv1', equipe_nom: 'Lille VBC A',             capitaine_uid: 'lc1', capitaine_email: 'paul.martin@lillevbc.fr',   membres: ['Paul M.', 'Tom B.', 'Axel D.', 'Hugo R.', 'Théo C.', 'Liam V.'],                             dateInscription: dAgo(6), statut: 'confirmée',           montant_payé: 4500 },
+  { id: 'insl2', tournoi_id: 'tol1', equipe_id: 'lv2', equipe_nom: 'Roubaix VB',              capitaine_uid: 'lc2', capitaine_email: 'contact@roubaix-vb.fr',     membres: ['Kevin S.', 'Mathieu A.', 'Florian N.', 'Dylan T.', 'Pierre C.', 'Alexis M.'],             dateInscription: dAgo(5), statut: 'confirmée',           montant_payé: 4500 },
+  { id: 'insl3', tournoi_id: 'tol1', equipe_id: 'lv3', equipe_nom: 'Tourcoing VB',            capitaine_uid: 'lc3', capitaine_email: 'tourcoing.volley@gmail.com', membres: ['Enzo R.', 'Lucas F.', 'Nathan D.', 'Killian S.', 'Rémi P.', 'Edouard B.'],               dateInscription: dAgo(4), statut: 'confirmée',           montant_payé: 4500 },
+  { id: 'insl4', tournoi_id: 'tol1', equipe_id: 'lv4', equipe_nom: 'Flandres VB',             capitaine_uid: 'lc4', capitaine_email: 'flandres.vb@hotmail.fr',    membres: ['Cédric V.', 'Antoine B.', 'Guillaume D.', 'Stéphane L.', 'Raphaël C.', 'Thomas M.'],  dateInscription: dAgo(3), statut: 'confirmée',           montant_payé: 4500 },
+  { id: 'insl5', tournoi_id: 'tol1', equipe_id: 'lv5', equipe_nom: 'Villeneuve VB',           capitaine_uid: 'lc5', capitaine_email: 'vvb59@gmail.com',          membres: ['Simon G.', 'Clément A.', 'Pierre-Luc D.', 'Baptiste R.', 'Julien T.', 'Maxime V.'],     dateInscription: dAgo(2), statut: 'confirmée',           montant_payé: 4500 },
+  { id: 'insl6', tournoi_id: 'tol1', equipe_id: 'lv6', equipe_nom: 'Dunkerque VB',            capitaine_uid: 'lc6', capitaine_email: 'dunkerque.vb@gmail.com',   membres: ['Mickael D.', 'Sébastien R.', 'Nicolas F.', 'Laurent P.', 'Fabrice B.', 'Yannick C.'], dateInscription: dAgo(2), statut: 'confirmée',           montant_payé: 4500 },
+  { id: 'insl7', tournoi_id: 'tol1', equipe_id: 'lv7', equipe_nom: 'Métropole VB',            capitaine_uid: 'lc7', capitaine_email: 'metropole.vb@outlook.fr',  membres: ['Adrien S.', 'Jérémy C.', 'Vincent D.', 'Olivier M.', 'Benoît T.', 'François R.'],     dateInscription: dAgo(1), statut: 'en_attente_paiement' },
+
+  // tol2 — Open Nord 4v4 (5 équipes)
+  { id: 'insn1', tournoi_id: 'tol2', equipe_id: 'nv1', equipe_nom: 'Spike Masters',           capitaine_uid: 'nc1', capitaine_email: 'spike.masters@gmail.com',  membres: ['Antoine L.', 'Maxime D.', 'Théo R.', 'Hugo C.'],              dateInscription: dAgo(4), statut: 'confirmée',           montant_payé: 3000 },
+  { id: 'insn2', tournoi_id: 'tol2', equipe_id: 'nv2', equipe_nom: 'Nord Attack',              capitaine_uid: 'nc2', capitaine_email: 'nordattack59@gmail.com',   membres: ['Kévin B.', 'Damien V.', 'Clément S.', 'Romain A.'],           dateInscription: dAgo(3), statut: 'confirmée',           montant_payé: 3000 },
+  { id: 'insn3', tournoi_id: 'tol2', equipe_id: 'nv3', equipe_nom: 'Block & Roll',             capitaine_uid: 'nc3', capitaine_email: 'blockroll.vb@gmail.com',   membres: ['Lucie M.', 'Sarah D.', 'Emma T.', 'Chloé R.'],                dateInscription: dAgo(3), statut: 'confirmée',           montant_payé: 3000 },
+  { id: 'insn4', tournoi_id: 'tol2', equipe_id: 'nv4', equipe_nom: 'Mixte Flandres',           capitaine_uid: 'nc4', capitaine_email: 'mixteflandres@gmail.com',  membres: ['Nicolas F.', 'Aurélie D.', 'Thomas B.', 'Laura M.'],          dateInscription: dAgo(2), statut: 'confirmée',           montant_payé: 3000 },
+  { id: 'insn5', tournoi_id: 'tol2', equipe_id: 'nv5', equipe_nom: 'Lens Volley 4',            capitaine_uid: 'nc5', capitaine_email: 'lens.volley@gmail.com',    membres: ['Franck D.', 'Yoann S.', 'Bilal M.', 'Karim T.'],              dateInscription: dAgo(1), statut: 'en_attente_paiement' },
+
+  // tol3 — Tournoi Inter-Clubs Hauts-de-France 6v6 (3 équipes)
+  { id: 'insi1', tournoi_id: 'tol3', equipe_id: 'iv1', equipe_nom: 'Lille VBC Elite',         capitaine_uid: 'ic1', capitaine_email: 'elite@lillevbc.fr',       membres: ['Julien M.', 'Romain T.', 'Nicolas B.', 'Clément D.', 'Alexis V.', 'Florian S.'],      dateInscription: dAgo(3), statut: 'confirmée',           montant_payé: 6000 },
+  { id: 'insi2', tournoi_id: 'tol3', equipe_id: 'iv2', equipe_nom: 'Tourcoing VB Pro',        capitaine_uid: 'ic2', capitaine_email: 'pro@tourcoing-vb.fr',     membres: ['Maxence B.', 'Théo L.', 'Kévin R.', 'Bastien M.', 'Antoine C.', 'Enzo D.'],         dateInscription: dAgo(2), statut: 'confirmée',           montant_payé: 6000 },
+  { id: 'insi3', tournoi_id: 'tol3', equipe_id: 'iv3', equipe_nom: 'Roubaix VB Select',       capitaine_uid: 'ic3', capitaine_email: 'select@roubaix-vb.fr',   membres: ['Dylan T.', 'Samuel C.', 'Hugo V.', 'Pierre-Antoine D.', 'Raphaël M.', 'Thomas S.'], dateInscription: dAgo(1), statut: 'en_attente_paiement' },
 ];

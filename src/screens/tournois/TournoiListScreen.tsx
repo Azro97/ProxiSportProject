@@ -2,11 +2,11 @@
 
 import React, { useEffect, useState, useCallback } from 'react';
 import {
-  View, Text, FlatList, StyleSheet,
+  View, Text, FlatList,
   ActivityIndicator, TouchableOpacity, StatusBar,
-  RefreshControl,
+  RefreshControl, ScrollView,
 } from 'react-native';
-import { Trophy } from 'lucide-react-native';
+import { Trophy, Shield } from 'lucide-react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { BottomTabScreenProps } from '@react-navigation/bottom-tabs';
 import { CompositeScreenProps } from '@react-navigation/native';
@@ -15,6 +15,7 @@ import { RootStackParamList, BottomTabParamList } from '../../types';
 import { Tournoi } from '../../models/Tournoi';
 import { getTournois } from '../../services/tournoiService';
 import { useColors } from '../../hooks/useColors';
+import { styles } from './TournoiListScreen.styles';
 import TournoiCard from './components/TournoiCard';
 
 type Props = CompositeScreenProps<
@@ -76,8 +77,12 @@ export default function TournoiListScreen({ navigation }: Props) {
     onSelect: (k: T) => void;
   }) {
     return (
-      <View style={styles.pillRow}>
-        {options.map(opt => {
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.pillRow}
+      >
+        {options.map((opt, index) => {
           const active = opt.key === selected;
           return (
             <TouchableOpacity
@@ -97,7 +102,7 @@ export default function TournoiListScreen({ navigation }: Props) {
             </TouchableOpacity>
           );
         })}
-      </View>
+      </ScrollView>
     );
   }
 
@@ -111,11 +116,20 @@ export default function TournoiListScreen({ navigation }: Props) {
           <Trophy size={22} color={colors.userPosition} strokeWidth={2} />
           <Text style={[styles.headerText, { color: colors.textPrimary }]}>Tournois</Text>
         </View>
-        {!loading && (
-          <Text style={[styles.countText, { color: colors.textSecondary }]}>
-            {displayed.length} tournoi{displayed.length !== 1 ? 's' : ''}
-          </Text>
-        )}
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+          {!loading && (
+            <Text style={[styles.countText, { color: colors.textSecondary }]}>
+              {displayed.length} tournoi{displayed.length !== 1 ? 's' : ''}
+            </Text>
+          )}
+          <TouchableOpacity
+            onPress={() => navigation.navigate('AdminLogin')}
+            style={[styles.adminBtn, { backgroundColor: colors.bgApp, borderColor: colors.borderSubtle }]}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          >
+            <Shield size={15} color={colors.textTertiary} strokeWidth={2} />
+          </TouchableOpacity>
+        </View>
       </View>
 
       {/* Filters */}
@@ -170,35 +184,3 @@ export default function TournoiListScreen({ navigation }: Props) {
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container:   { flex: 1 },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 18,
-    paddingBottom: 14,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-  },
-  headerTitle: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  headerText:  { fontSize: 22, fontWeight: '800', letterSpacing: 0.2 },
-  countText:   { fontSize: 13 },
-  filtersArea: { paddingTop: 10, paddingBottom: 4 },
-  pillRow:  {
-    flexDirection: 'row', gap: 8,
-    paddingHorizontal: 16, paddingBottom: 8,
-    flexWrap: 'nowrap',
-  },
-  pill:     {
-    paddingHorizontal: 14, paddingVertical: 6,
-    borderRadius: 20,
-  },
-  pillText: { fontSize: 13, fontWeight: '600' },
-  list:     { paddingTop: 10, paddingBottom: 40 },
-  loader:   { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  empty:    { flex: 1, alignItems: 'center', paddingTop: 64, gap: 10 },
-  emptyIcon:  { fontSize: 48 },
-  emptyText:  { fontSize: 16, fontWeight: '500' },
-  emptyReset: { fontSize: 14, fontWeight: '600', marginTop: 4 },
-});

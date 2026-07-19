@@ -6,6 +6,8 @@ export interface Inscription {
   equipe_id: string;
   equipe_nom: string;
   capitaine_uid: string;
+  capitaine_email: string;
+  membres: string[];
   dateInscription: Date;
   statut: InscriptionStatut;
   stripe_payment_intent_id?: string;

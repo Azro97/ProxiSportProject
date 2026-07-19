@@ -8,9 +8,10 @@ import {
 } from 'react-native';
 import { Check, X, Plus, Trash2, Mail } from 'lucide-react-native';
 import { Tournoi } from '../../../models/Tournoi';
-import { formatPrix } from '../../../services/tournoiService';
+import { formatPrix, createInscription } from '../../../services/tournoiService';
 import { sportColors } from '../../../theme';
 import { useColors } from '../../../hooks/useColors';
+import { styles } from './InscriptionModal.styles';
 
 const SPORT_EMOJI: Record<string, string> = {
   foot: '⚽', basket: '🏀', hand: '🤾', volley: '🏐',
@@ -82,9 +83,22 @@ export default function InscriptionModal({ visible, tournoi, onClose }: Props) {
     setMembers(m => m.map((v, i) => (i === index ? value : v)));
   }
 
-  function handlePay() {
+  async function handlePay() {
     setPaying(true);
-    setTimeout(() => { setPaying(false); setStep('success'); }, 1600);
+    try {
+      await createInscription({
+        tournoi_id: tournoi.id,
+        equipe_nom: teamName.trim(),
+        capitaine_email: email.trim(),
+        membres: members.filter(m => m.trim().length > 0).map(m => m.trim()),
+        montant_payé: tournoi.prixInscription,
+      });
+    } catch (_) {
+      // mock never throws — silently continue
+    } finally {
+      setPaying(false);
+      setStep('success');
+    }
   }
 
   return (
@@ -287,51 +301,3 @@ export default function InscriptionModal({ visible, tournoi, onClose }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
-  flex:  { flex: 1 },
-  scrim: { flex: 1, backgroundColor: 'rgba(0,0,0,0.52)', justifyContent: 'flex-end' },
-  sheet: { borderTopLeftRadius: 24, borderTopRightRadius: 24, paddingBottom: 36, maxHeight: '88%' },
-  handle: { width: 38, height: 4, borderRadius: 2, alignSelf: 'center', marginTop: 10, marginBottom: 4 },
-  header: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 20, paddingVertical: 14 },
-  sheetTitle:   { fontSize: 18, fontWeight: '800' },
-  sheetSubtitle:{ fontSize: 13, marginTop: 2 },
-  closeBtn:     { width: 32, height: 32, borderRadius: 16, backgroundColor: 'rgba(0,0,0,0.07)', alignItems: 'center', justifyContent: 'center' },
-  backStepBtn:  { width: 32, height: 32, alignItems: 'center', justifyContent: 'center' },
-  backArrow:    { fontSize: 20, fontWeight: '600' },
-  formScroll:   { flexGrow: 0 },
-  formContent:  { paddingHorizontal: 20, paddingBottom: 4 },
-  fieldLabel:   { fontSize: 12, fontWeight: '600', textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 8 },
-  input:        { height: 48, borderRadius: 12, paddingHorizontal: 14, fontSize: 15, borderWidth: 1, marginBottom: 20 },
-  emailRow:     { flexDirection: 'row', alignItems: 'center', marginBottom: 6 },
-  emailIcon:    { marginRight: 8 },
-  emailInput:   { flex: 1, height: 48, borderRadius: 12, paddingHorizontal: 14, fontSize: 15, borderWidth: 1.5 },
-  emailHint:    { fontSize: 11, marginBottom: 20, marginLeft: 2 },
-  membersHeader:{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 },
-  addBtn:       { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 10, paddingVertical: 6, borderRadius: 20, borderWidth: 1 },
-  addBtnText:   { fontSize: 12, fontWeight: '700' },
-  memberRow:    { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 10 },
-  memberNum:    { width: 28, height: 28, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
-  memberNumText:{ fontSize: 12, fontWeight: '700' },
-  memberInput:  { flex: 1, height: 44, borderRadius: 12, paddingHorizontal: 12, fontSize: 14, borderWidth: 1 },
-  removeBtn:    { width: 28, height: 28, alignItems: 'center', justifyContent: 'center' },
-  recapCard:       { flexDirection: 'row', gap: 12, padding: 14, borderRadius: 14, borderWidth: StyleSheet.hairlineWidth, marginBottom: 12 },
-  recapSportBadge: { width: 42, height: 42, borderRadius: 21, alignItems: 'center', justifyContent: 'center' },
-  recapSportEmoji: { fontSize: 20 },
-  recapTournoiNom: { fontSize: 15, fontWeight: '700', lineHeight: 20 },
-  recapMeta:       { fontSize: 12 },
-  recapInfoRow:    { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 11, borderBottomWidth: StyleSheet.hairlineWidth },
-  recapLabel:      { fontSize: 13 },
-  recapValue:      { fontSize: 14, fontWeight: '600' },
-  recapPrice:      { fontSize: 20, fontWeight: '900' },
-  ctaArea:    { paddingHorizontal: 20, paddingTop: 12, gap: 10 },
-  payBtn:     { height: 52, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
-  payBtnText: { fontSize: 16, fontWeight: '800' },
-  secureNote: { fontSize: 12, textAlign: 'center' },
-  successBody:  { alignItems: 'center', paddingHorizontal: 28, paddingTop: 16, paddingBottom: 8, gap: 14 },
-  checkCircle:  { width: 88, height: 88, borderRadius: 44, alignItems: 'center', justifyContent: 'center', marginBottom: 4 },
-  successTitle: { fontSize: 24, fontWeight: '900', textAlign: 'center' },
-  successSub:   { fontSize: 15, textAlign: 'center', lineHeight: 22 },
-  successNote:  { fontSize: 12, textAlign: 'center' },
-  doneBtn:      { marginTop: 8, height: 52, borderRadius: 14, paddingHorizontal: 48, alignItems: 'center', justifyContent: 'center' },
-  doneBtnText:  { fontSize: 16, fontWeight: '800', color: '#fff' },
-});

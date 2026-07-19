@@ -48,3 +48,18 @@ export function getUpcomingWeekDays(): {
   }
   return result;
 }
+
+/** Format a Date as DD/MM/YYYY (local time). */
+export function formatDate(d: Date): string {
+  return d.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+}
+
+/** Format a Date as HH:MM (local time). */
+export function formatTime(d: Date): string {
+  return d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+}
+
+/** Format a Date as "15 juillet 2026" (long French format). */
+export function formatDateLong(d: Date): string {
+  return d.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' });
+}
