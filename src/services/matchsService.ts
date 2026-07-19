@@ -7,7 +7,7 @@ import { MOCK_MATCHES, MOCK_REGIONS, MOCK_DEPARTEMENTS, getFreshMockMatches } fr
 import type { FirebaseFirestoreTypes } from '@react-native-firebase/firestore';
 
 // TODO: set to false and configure google-services.json to use real Firestore
-const USE_MOCK = __DEV__;
+const USE_MOCK = true; // always mock for demo
 
 /**
  * Fetch matches from Firestore applying filters in priority order:

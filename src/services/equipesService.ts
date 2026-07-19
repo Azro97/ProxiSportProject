@@ -4,7 +4,7 @@ import { Equipe } from '../models/Equipe';
 import { MOCK_EQUIPES } from './mock/mockData';
 
 // TODO: set to false and configure google-services.json to use real Firestore
-const USE_MOCK = __DEV__;
+const USE_MOCK = true; // always mock for demo
 
 // Session-level cache — Firestore is only read once per app launch
 let _equipesCache: Equipe[] | null = null;
