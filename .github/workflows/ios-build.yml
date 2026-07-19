@@ -44,6 +44,26 @@ jobs:
           echo "SUPABASE_URL=${{ secrets.SUPABASE_URL || 'https://placeholder.supabase.co' }}" >> .env
           echo "SUPABASE_ANON_KEY=${{ secrets.SUPABASE_ANON_KEY || 'placeholder-anon-key' }}" >> .env
 
+      - name: Select an Xcode version compatible with RN 0.76
+        # RN 0.76 predates the newest Xcode/Clang toolchains. A transitive
+        # C++ dependency (fmt, pulled in via React Native's core) uses a
+        # consteval format-string check that newer, stricter Clang versions
+        # reject ("call to consteval function ... is not a constant
+        # expression"). macos-latest runners ship several Xcode versions
+        # side by side under /Applications - pick the oldest one available
+        # rather than hardcoding a version number that may not exist on a
+        # given runner image.
+        run: |
+          echo "Available Xcode versions:"
+          ls -d /Applications/Xcode*.app
+          OLDEST=$(ls -d /Applications/Xcode_*.app 2>/dev/null | sort -V | head -n1)
+          if [ -z "$OLDEST" ]; then
+            OLDEST="/Applications/Xcode.app"
+          fi
+          echo "Selecting: $OLDEST"
+          sudo xcode-select -s "$OLDEST/Contents/Developer"
+          xcodebuild -version
+
       - name: Install CocoaPods dependencies
         working-directory: ios
         run: pod install
