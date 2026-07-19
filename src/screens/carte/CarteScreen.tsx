@@ -6,10 +6,10 @@
 // Floating sport filter chips are local state — independent of filtresStore.
 
 import React, { useEffect, useState, useMemo, useRef } from 'react';
-import { View, Text, StyleSheet, StatusBar, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, StatusBar, TouchableOpacity, Platform, FlatList } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import MapLibreGL from '@maplibre/maplibre-react-native';
-import { LocateFixed } from 'lucide-react-native';
+import { LocateFixed, MapPin as MapPinIcon, WifiOff } from 'lucide-react-native';
 import { useLocationStore } from '../../stores/locationStore';
 import { getTerrainsByLocation } from '../../services/terrainsService';
 import { getTerrainIdsForSport } from '../../services/matchsService';
@@ -20,112 +20,62 @@ import { useThemeStore } from '../../stores/themeStore';
 import TerrainModal from './components/TerrainModal';
 import SportFloatingFilter from './components/SportFloatingFilter';
 
-// No access token needed — OpenFreeMap is fully public
+// Only render the map on Android API 28+ — older ARMv7 devices (API 27 = Android 8.1)
+// crash with SIGSEGV in MapLibre's tile-loading worker thread.
 MapLibreGL.setAccessToken(null);
+const API_LEVEL = Platform.OS === 'android' ? parseInt(Platform.Version as unknown as string, 10) : 999;
+const MAP_SUPPORTED = API_LEVEL >= 28;
+
+const PROD_BASE   = 'https://tiles.openfreemap.org';
+const STYLE_LIGHT = `${PROD_BASE}/styles/bright`;
+const STYLE_DARK  = `${PROD_BASE}/styles/dark`;
 
 const SPORT_EMOJI: Record<string, string> = {
   foot: '⚽', basket: '🏀', hand: '🤾', volley: '🏐',
 };
 
-// Beautiful teardrop map pin:
-//   • Large colored circle head with white border + drop shadow
-//   • Sport emoji (big) when a filter is active, else white dot
-//   • Thin inner white ring for a "glass" depth effect
-//   • Sharp downward tail that tapers to a point
-//   • Tiny oval shadow beneath the tip for grounding
-// Defined at module level — never re-created on render.
+// Beautiful teardrop map pin
 const PIN_SIZE = 52;
-
 function MapPin({ color, sport }: { color: string; sport: string | null }) {
   const emoji = sport ? SPORT_EMOJI[sport] : null;
   return (
     <View style={PIN_S.wrapper}>
-      {/* Circle head */}
       <View style={[PIN_S.circle, { backgroundColor: color }]}>
-        {/* Inner white ring for depth */}
         <View style={PIN_S.ring}>
-          {emoji
-            ? <Text style={PIN_S.emoji}>{emoji}</Text>
-            : <View style={PIN_S.dot} />}
+          {emoji ? <Text style={PIN_S.emoji}>{emoji}</Text> : <View style={PIN_S.dot} />}
         </View>
       </View>
-      {/* Downward tail */}
       <View style={[PIN_S.tail, { borderTopColor: color }]} />
-      {/* Ground shadow */}
       <View style={PIN_S.groundShadow} />
     </View>
   );
 }
 
 const PIN_S = StyleSheet.create({
-  wrapper: {
-    alignItems: 'center',
-    paddingHorizontal: 6,   // room for shadow not to clip
-  },
+  wrapper: { alignItems: 'center', paddingHorizontal: 6 },
   circle: {
-    width: PIN_SIZE,
-    height: PIN_SIZE,
-    borderRadius: PIN_SIZE / 2,
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 3.5,
-    borderColor: '#ffffff',
-    elevation: 10,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 5 },
-    shadowOpacity: 0.4,
-    shadowRadius: 8,
+    width: PIN_SIZE, height: PIN_SIZE, borderRadius: PIN_SIZE / 2,
+    justifyContent: 'center', alignItems: 'center',
+    borderWidth: 3.5, borderColor: '#ffffff',
+    elevation: 10, shadowColor: '#000',
+    shadowOffset: { width: 0, height: 5 }, shadowOpacity: 0.4, shadowRadius: 8,
   },
   ring: {
-    width: PIN_SIZE - 14,
-    height: PIN_SIZE - 14,
-    borderRadius: (PIN_SIZE - 14) / 2,
-    borderWidth: 2,
-    borderColor: 'rgba(255,255,255,0.35)',
-    justifyContent: 'center',
-    alignItems: 'center',
+    width: PIN_SIZE - 14, height: PIN_SIZE - 14, borderRadius: (PIN_SIZE - 14) / 2,
+    borderWidth: 2, borderColor: 'rgba(255,255,255,0.35)',
+    justifyContent: 'center', alignItems: 'center',
   },
-  emoji: {
-    fontSize: 22,
-    lineHeight: 26,
-    textAlign: 'center',
-  },
-  dot: {
-    width: 12,
-    height: 12,
-    borderRadius: 6,
-    backgroundColor: 'rgba(255,255,255,0.95)',
-  },
+  emoji: { fontSize: 22, lineHeight: 26, textAlign: 'center' },
+  dot: { width: 12, height: 12, borderRadius: 6, backgroundColor: 'rgba(255,255,255,0.95)' },
   tail: {
-    width: 0,
-    height: 0,
-    borderLeftWidth: 10,
-    borderRightWidth: 10,
-    borderTopWidth: 18,
-    borderLeftColor: 'transparent',
-    borderRightColor: 'transparent',
-    marginTop: -3,
+    width: 0, height: 0, borderLeftWidth: 10, borderRightWidth: 10, borderTopWidth: 18,
+    borderLeftColor: 'transparent', borderRightColor: 'transparent', marginTop: -3,
   },
-  groundShadow: {
-    width: 14,
-    height: 5,
-    borderRadius: 7,
-    backgroundColor: 'rgba(0,0,0,0.18)',
-    marginTop: 1,
-  },
+  groundShadow: { width: 14, height: 5, borderRadius: 7, backgroundColor: 'rgba(0,0,0,0.18)', marginTop: 1 },
 });
 
 const RADIUS_KM = 50;
 const DEFAULT_ZOOM = 10;
-
-// In dev: use local proxy on host machine (10.0.2.2) to bypass emulator DNS.
-// In prod: connect directly to OpenFreeMap over HTTPS.
-// Run `npm run tile-proxy` in a separate terminal when testing on emulator.
-const PROXY_BASE  = 'http://10.0.2.2:7777';
-const PROD_BASE   = 'https://tiles.openfreemap.org';
-const BASE        = __DEV__ ? PROXY_BASE : PROD_BASE;
-const STYLE_LIGHT = `${BASE}/styles/bright`;
-const STYLE_DARK  = `${BASE}/styles/dark`;
 
 export default function CarteScreen() {
   const colors = useColors();
@@ -146,16 +96,10 @@ export default function CarteScreen() {
     getTerrainsByLocation(centerLat, centerLng, RADIUS_KM).then(setTerrains);
   }, [centerLat, centerLng]);
 
-  // When sport filter changes, fetch the set of terrain IDs that actually have
-  // matches for that sport — so we only show relevant pins on the map.
   useEffect(() => {
-    if (!sportFilter) {
-      setSportTerrainIds(null);
-      return;
-    }
+    if (!sportFilter) { setSportTerrainIds(null); return; }
     getTerrainIdsForSport(sportFilter).then(ids => {
       setSportTerrainIds(ids);
-      // Close modal if the currently selected terrain has no match for the new sport
       setSelectedTerrain(prev => (prev && !ids.has(prev.id) ? null : prev));
     });
   }, [sportFilter]);
@@ -165,7 +109,6 @@ export default function CarteScreen() {
     : terrains;
 
   const handleRecenter = () => {
-    // MapLibre uses [longitude, latitude] GeoJSON order
     cameraRef.current?.setCamera({
       centerCoordinate: [centerLng, centerLat],
       zoomLevel: DEFAULT_ZOOM,
@@ -173,6 +116,68 @@ export default function CarteScreen() {
     });
   };
 
+  // ── Fallback list for devices where MapLibre can't run ───────────────────────
+  if (!MAP_SUPPORTED) {
+    return (
+      <View style={[styles.root, { backgroundColor: colors.bgApp }]}>
+        <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} backgroundColor="transparent" translucent />
+        <SafeAreaView edges={['top']} style={{ flex: 1 }}>
+          {/* Header */}
+          <View style={styles.fallbackHeader}>
+            <WifiOff size={16} color={colors.textMuted} strokeWidth={1.8} style={{ marginRight: 6 }} />
+            <Text style={[styles.fallbackHeaderText, { color: colors.textMuted }]}>
+              Carte non disponible sur cet appareil
+            </Text>
+          </View>
+
+          {/* Sport filter */}
+          <View style={{ paddingHorizontal: 16, paddingBottom: 8 }}>
+            <SportFloatingFilter
+              selected={sportFilter}
+              onSelect={s => { setSelectedTerrain(null); setSportFilter(s); }}
+            />
+          </View>
+
+          {/* Terrain list */}
+          <FlatList
+            data={visibleTerrains}
+            keyExtractor={t => t.id}
+            contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 32 }}
+            ItemSeparatorComponent={() => <View style={{ height: 10 }} />}
+            renderItem={({ item: terrain }) => {
+              const sport = (terrain as any).sport as string | undefined;
+              const emoji = sport ? (SPORT_EMOJI[sport] ?? '🏟️') : '🏟️';
+              return (
+                <TouchableOpacity
+                  style={[styles.terrainCard, { backgroundColor: colors.bgCard, borderColor: colors.borderSubtle }]}
+                  onPress={() => setSelectedTerrain(terrain)}
+                  activeOpacity={0.75}
+                >
+                  <Text style={styles.terrainEmoji}>{emoji}</Text>
+                  <View style={{ flex: 1 }}>
+                    <Text style={[styles.terrainName, { color: colors.textPrimary }]}>{terrain.nom}</Text>
+                    <Text style={[styles.terrainAddress, { color: colors.textSecondary }]}>
+                      {terrain.adresse} · {terrain.ville}
+                    </Text>
+                  </View>
+                  <MapPinIcon size={16} color={colors.textMuted} strokeWidth={1.5} />
+                </TouchableOpacity>
+              );
+            }}
+            ListEmptyComponent={
+              <Text style={[styles.emptyText, { color: colors.textMuted }]}>Aucun terrain trouvé</Text>
+            }
+          />
+        </SafeAreaView>
+
+        {selectedTerrain && (
+          <TerrainModal terrain={selectedTerrain} onClose={() => setSelectedTerrain(null)} />
+        )}
+      </View>
+    );
+  }
+
+  // ── Full map view (Android API 28+ / iOS) ────────────────────────────────────
   return (
     <View style={styles.root}>
       <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} backgroundColor="transparent" translucent />
@@ -188,25 +193,18 @@ export default function CarteScreen() {
           zoomLevel={DEFAULT_ZOOM}
           centerCoordinate={[centerLng, centerLat]}
         />
-
         {status === 'granted' && (
           <MapLibreGL.UserLocation visible androidRenderMode="normal" />
         )}
-
         {visibleTerrains.map(terrain => {
-          const pinColor = sportFilter
-            ? (sportColors[sportFilter] ?? colors.userPosition)
-            : colors.userPosition;
+          const pinColor = sportFilter ? (sportColors[sportFilter] ?? colors.userPosition) : colors.userPosition;
           return (
             <MapLibreGL.MarkerView
               key={`${terrain.id}-${sportFilter ?? 'all'}`}
               coordinate={[terrain.lng, terrain.lat]}
               anchor={{ x: 0.5, y: 1.0 }}
             >
-              <TouchableOpacity
-                onPress={() => setSelectedTerrain(terrain)}
-                activeOpacity={0.8}
-              >
+              <TouchableOpacity onPress={() => setSelectedTerrain(terrain)} activeOpacity={0.8}>
                 <MapPin color={pinColor} sport={sportFilter} />
               </TouchableOpacity>
             </MapLibreGL.MarkerView>
@@ -214,7 +212,6 @@ export default function CarteScreen() {
         })}
       </MapLibreGL.MapView>
 
-      {/* Floating header */}
       <SafeAreaView edges={['top']} style={styles.headerSafe} pointerEvents="box-none">
         <View style={styles.headerRow} pointerEvents="box-none">
           <View style={styles.headerCard}>
@@ -226,29 +223,17 @@ export default function CarteScreen() {
         </View>
       </SafeAreaView>
 
-      {/* Floating sport filter */}
       <SportFloatingFilter
         selected={sportFilter}
-        onSelect={sport => {
-          setSelectedTerrain(null); // always close modal when changing sport filter
-          setSportFilter(sport);
-        }}
+        onSelect={sport => { setSelectedTerrain(null); setSportFilter(sport); }}
       />
 
-      {/* Recenter FAB */}
-      <TouchableOpacity
-        style={styles.fab}
-        onPress={handleRecenter}
-        activeOpacity={0.8}
-      >
+      <TouchableOpacity style={styles.fab} onPress={handleRecenter} activeOpacity={0.8}>
         <LocateFixed size={20} color={colors.textSecondary} strokeWidth={1.8} />
       </TouchableOpacity>
 
       {selectedTerrain && (
-        <TerrainModal
-          terrain={selectedTerrain}
-          onClose={() => setSelectedTerrain(null)}
-        />
+        <TerrainModal terrain={selectedTerrain} onClose={() => setSelectedTerrain(null)} />
       )}
     </View>
   );
@@ -312,6 +297,42 @@ function makeStyles(colors: ColorPalette) {
       shadowOffset: { width: 0, height: 2 },
       shadowOpacity: 0.12,
       shadowRadius: 4,
+    },
+    // Fallback list styles
+    fallbackHeader: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingHorizontal: 16,
+      paddingVertical: 12,
+    },
+    fallbackHeaderText: {
+      fontSize: 13,
+      fontStyle: 'italic',
+    },
+    terrainCard: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      padding: 14,
+      borderRadius: 14,
+      borderWidth: 1,
+      elevation: 2,
+    },
+    terrainEmoji: {
+      fontSize: 28,
+      marginRight: 12,
+    },
+    terrainName: {
+      fontSize: 15,
+      fontWeight: '600',
+      marginBottom: 2,
+    },
+    terrainAddress: {
+      fontSize: 12,
+    },
+    emptyText: {
+      textAlign: 'center',
+      marginTop: 40,
+      fontSize: 14,
     },
   });
 }
