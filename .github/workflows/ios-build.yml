@@ -76,11 +76,16 @@ jobs:
 
       - name: Build for iOS Simulator
         working-directory: ios
+        # -sdk iphonesimulator alone is enough to force a simulator build.
+        # Adding -destination 'generic/platform=iOS Simulator' on top of
+        # that confused xcodebuild's destination resolver into evaluating
+        # physical-device eligibility instead ("iOS 26.0 is not installed"),
+        # since we're not installing onto or running on any concrete
+        # simulator here - just compiling.
         run: |
           xcodebuild build \
             -workspace PP.xcworkspace \
             -scheme PP \
             -configuration Debug \
             -sdk iphonesimulator \
-            -destination 'generic/platform=iOS Simulator' \
             CODE_SIGNING_ALLOWED=NO
