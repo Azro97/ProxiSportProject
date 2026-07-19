@@ -19,3 +19,16 @@ buildscript {
         classpath("org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlinVersion")
     }
 }
+
+// Force all library modules to build for armeabi-v7a + x86_64
+subprojects {
+    afterEvaluate { project ->
+        if (project.hasProperty('android')) {
+            project.android.defaultConfig {
+                ndk {
+                    abiFilters "armeabi-v7a", "x86_64"
+                }
+            }
+        }
+    }
+}
