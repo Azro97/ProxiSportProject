@@ -45,14 +45,19 @@ export default function MatchCard({ match, terrainNom, terrainVille, onPress }: 
             : <ChevronRight size={14} color={colors.textMuted} strokeWidth={2} />}
         </View>
         <View style={styles.scoreRow}>
-          <Text style={styles.teams} numberOfLines={1}>{match.equipeA_nom}</Text>
-          {hasScore && <Text style={[styles.scoreNum, { color: accent }]}>{match.scoreA}</Text>}
+          <Text style={styles.teams} numberOfLines={1} ellipsizeMode="tail">
+            {match.equipeA_nom}
+          </Text>
+          {hasScore
+            ? <Text style={[styles.scoreNum, { color: accent }]}>{match.scoreA}</Text>
+            : <Text style={styles.vs}>vs</Text>}
+          {hasScore
+            ? <Text style={[styles.scoreNum, { color: colors.textMuted }]}>{match.scoreB}</Text>
+            : null}
+          <Text style={[styles.teams, styles.teamB]} numberOfLines={1} ellipsizeMode="tail">
+            {match.equipeB_nom}
+          </Text>
         </View>
-        <View style={styles.scoreRow}>
-          <Text style={[styles.teams, styles.teamB]} numberOfLines={1}>{match.equipeB_nom}</Text>
-          {hasScore && <Text style={[styles.scoreNum, { color: colors.textMuted }]}>{match.scoreB}</Text>}
-        </View>
-        {!hasScore && <Text style={styles.vs}>vs</Text>}
         {lieu.length > 0 && (
           <Text style={styles.lieu}>{lieu}</Text>
         )}
@@ -71,63 +76,63 @@ function makeStyles(colors: ColorPalette) {
     overflow: 'hidden',
   },
   accent: { width: 3 },
-  body: { flex: 1, paddingHorizontal: 14, paddingVertical: 12 },
+  body: { flex: 1, paddingHorizontal: 12, paddingVertical: 8 },
   topRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 6,
+    marginBottom: 3,
   },
   time: {
-    fontSize: 11,
+    fontSize: 10,
     fontWeight: '700',
     color: colors.textMuted,
     letterSpacing: 0.6,
   },
   finBadge: {
-    paddingHorizontal: 7,
-    paddingVertical: 2,
-    borderRadius: 6,
+    paddingHorizontal: 6,
+    paddingVertical: 1,
+    borderRadius: 5,
   },
   finText: {
-    fontSize: 10,
+    fontSize: 9,
     fontWeight: '700',
     letterSpacing: 0.8,
   },
   scoreRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
+    gap: 4,
   },
   teams: {
-    fontSize: 14,
+    flex: 1,
+    fontSize: 13,
     fontWeight: '700',
     color: colors.textPrimary,
-    lineHeight: 20,
-    flex: 1,
+    lineHeight: 18,
   },
   teamB: {
     color: colors.textSecondary,
-  },
-  scoreNum: {
-    fontSize: 16,
-    fontWeight: '800',
-    marginLeft: 8,
-    minWidth: 22,
     textAlign: 'right',
   },
+  scoreNum: {
+    fontSize: 14,
+    fontWeight: '800',
+    minWidth: 20,
+    textAlign: 'center',
+  },
   vs: {
-    fontSize: 10,
-    fontWeight: '600',
+    fontSize: 9,
+    fontWeight: '700',
     color: colors.textMuted,
-    letterSpacing: 1,
+    letterSpacing: 0.8,
     textTransform: 'uppercase',
-    marginVertical: 2,
+    paddingHorizontal: 2,
   },
   lieu: {
-    fontSize: 11,
+    fontSize: 10,
     color: colors.textTertiary,
-    marginTop: 6,
+    marginTop: 4,
   },
   });
 }

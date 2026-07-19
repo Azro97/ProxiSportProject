@@ -11,7 +11,7 @@ import {
   ActivityIndicator,
   TouchableOpacity,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Search } from 'lucide-react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -34,6 +34,7 @@ type Mode = 'upcoming' | 'results';
 export default function MatchsScreen() {
   const colors = useColors();
   const isDark = useThemeStore(s => s.isDark);
+  const insets = useSafeAreaInsets();
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const {
@@ -90,24 +91,18 @@ export default function MatchsScreen() {
 
   const ListHeader = useMemo(() => (
     <View>
-      <SafeAreaView edges={['top']}>
-        <View style={styles.header}>
+      <View style={[styles.header, { paddingTop: insets.top + 8 }]}>
           <View style={styles.headerText}>
-            <Text style={styles.eyebrow}>
-              {sport
-                ? `${count} ${mode === 'results' ? 'RÉSULTAT' : 'MATCH'}${count !== 1 ? 'S' : ''}`
-                : 'PROXISPORT'}
-            </Text>
             <Text style={styles.title}>
               {mode === 'results' ? 'Résultats' : 'Matchs'}{' '}
               <Text style={{ color: accent }}>près de vous</Text>
+              {sport ? <Text style={styles.count}>{'  '}{count}</Text> : null}
             </Text>
           </View>
           <TouchableOpacity style={styles.themeBtn} onPress={() => navigation.navigate('RechercheEquipes')} activeOpacity={0.7}>
             <Search size={20} color={colors.textSecondary} strokeWidth={2} />
           </TouchableOpacity>
         </View>
-      </SafeAreaView>
 
       {/* Mode toggle */}
       <View style={styles.modeRow}>
@@ -141,7 +136,7 @@ export default function MatchsScreen() {
       {isLoading && <ActivityIndicator style={styles.loader} color={accent} size="large" />}
     </View>
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  ), [mode, sport, regions, divisions, date, count, accent, isLoading, styles, isDark, colors]);
+  ), [mode, sport, regions, divisions, date, count, accent, isLoading, styles, isDark, colors, insets]);
 
   const ListEmpty = useMemo(() => !isLoading ? (
     !sport ? (
@@ -222,8 +217,8 @@ function makeStyles(colors: ColorPalette) {
     root: { flex: 1, backgroundColor: colors.bgApp },
     header: {
       paddingHorizontal: 20,
-      paddingTop: 8,
-      paddingBottom: 16,
+      paddingTop: 6,
+      paddingBottom: 6,
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'space-between',
@@ -240,25 +235,22 @@ function makeStyles(colors: ColorPalette) {
       justifyContent: 'center',
       marginLeft: 12,
     },
-    eyebrow: {
-      fontSize: 10,
-      fontWeight: '700',
-      letterSpacing: 1.8,
-      color: colors.textMuted,
-      textTransform: 'uppercase',
-      marginBottom: 4,
-    },
+
     title: {
-      fontSize: 30,
-      fontWeight: '800',
+      fontSize: 17,
+      fontWeight: '700',
       color: colors.textPrimary,
-      letterSpacing: 0.4,
-      lineHeight: 36,
+      letterSpacing: 0.2,
+    },
+    count: {
+      fontSize: 13,
+      fontWeight: '600',
+      color: colors.textMuted,
     },
     modeRow: {
       flexDirection: 'row',
       marginHorizontal: 16,
-      marginBottom: 10,
+      marginBottom: 6,
       backgroundColor: colors.bgInput,
       borderRadius: 10,
       padding: 3,
@@ -266,12 +258,12 @@ function makeStyles(colors: ColorPalette) {
     },
     modeBtn: {
       flex: 1,
-      paddingVertical: 7,
+      paddingVertical: 5,
       borderRadius: 8,
       alignItems: 'center',
     },
     modeBtnText: {
-      fontSize: 13,
+      fontSize: 12,
       fontWeight: '600',
       color: colors.textMuted,
     },

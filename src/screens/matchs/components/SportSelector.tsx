@@ -57,32 +57,32 @@ export default function SportSelector({ selected, onSelect }: Props) {
 function makeStyles(colors: ColorPalette) {
   return StyleSheet.create({
   wrapper: {
-    paddingTop: 14,
-    paddingBottom: 4,
+    paddingTop: 8,
+    paddingBottom: 2,
     borderBottomWidth: 1,
     borderBottomColor: colors.borderFaint,
   },
   stepLabel: {
-    fontSize: 9.5,
+    fontSize: 9,
     fontWeight: '700',
     letterSpacing: 1.3,
     color: colors.textTertiary,
     textTransform: 'uppercase',
     paddingHorizontal: 20,
-    marginBottom: 10,
+    marginBottom: 6,
   },
-  content: { paddingHorizontal: 16, paddingBottom: 12, gap: 8, flexDirection: 'row' },
+  content: { paddingHorizontal: 16, paddingBottom: 8, gap: 8, flexDirection: 'row' },
   chip: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
+    gap: 5,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
     borderRadius: 999,
     borderWidth: 1,
     backgroundColor: colors.bgInput,
   },
-  emoji: { fontSize: 14 },
-  label: { fontSize: 13, fontWeight: '600', color: colors.textSecondary },
+  emoji: { fontSize: 13 },
+  label: { fontSize: 12, fontWeight: '600', color: colors.textSecondary },
   });
 }

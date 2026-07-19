@@ -77,8 +77,8 @@ function makeStyles(colors: ColorPalette) {
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 16,
-    paddingVertical: 10,
-    marginTop: 8,
+    paddingVertical: 6,
+    marginTop: 4,
   },
   sectionTitle: {
     fontSize: 11,

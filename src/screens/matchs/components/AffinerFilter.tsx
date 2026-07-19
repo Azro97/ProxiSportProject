@@ -275,20 +275,20 @@ export default function AffinerFilter({ disabled = false }: { disabled?: boolean
 function makeStyles(colors: ColorPalette) {
   return StyleSheet.create({
   wrapper: {
-    paddingTop: 12,
-    paddingBottom: 14,
+    paddingTop: 8,
+    paddingBottom: 8,
     borderBottomWidth: 1,
     borderBottomColor: colors.borderFaint,
   },
   dimmed: { opacity: 0.4 },
   stepLabel: {
-    fontSize: 9.5,
+    fontSize: 9,
     fontWeight: '700',
     letterSpacing: 1.3,
     color: colors.textTertiary,
     textTransform: 'uppercase',
     paddingHorizontal: 20,
-    marginBottom: 10,
+    marginBottom: 6,
   },
   pills: {
     flexDirection: 'row',
@@ -299,8 +299,8 @@ function makeStyles(colors: ColorPalette) {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 14,
-    paddingVertical: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
     borderRadius: 12,
     borderWidth: 1,
     borderColor: colors.borderSubtle,
@@ -314,10 +314,10 @@ function makeStyles(colors: ColorPalette) {
     letterSpacing: 0.8,
     textTransform: 'uppercase',
     color: colors.textMuted,
-    marginBottom: 2,
+    marginBottom: 1,
   },
   pillValue: {
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: '600',
     color: colors.textSecondary,
   },
