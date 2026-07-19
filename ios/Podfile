@@ -37,6 +37,14 @@ target 'PP' do
       # :ccache_enabled => true
     )
 
+    # maplibre-react-native's podspec defines $MLRN.post_install, which
+    # injects the actual MapLibre Native SDK as a Swift Package Manager
+    # dependency (not a CocoaPods pod) into the Xcode project. Without
+    # calling it here, that SPM package reference never gets added and the
+    # wrapper code fails with "Module 'MapLibre' not found" even though
+    # maplibre-react-native itself installs and compiles fine.
+    $MLRN.post_install(installer)
+
     # Xcode 15+ made implicit C function declarations a hard error by
     # default (previously just a warning). Some pods - maplibre-react-native
     # in particular - predate that change and call C functions without a
