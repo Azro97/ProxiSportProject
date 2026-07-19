@@ -64,6 +64,17 @@ jobs:
           sudo xcode-select -s "$OLDEST/Contents/Developer"
           xcodebuild -version
 
+      - name: Ensure an iOS Simulator runtime is installed
+        # GitHub's macOS runner images fully provision simulator runtimes
+        # only for the default (newest) Xcode; the older side-by-side
+        # installs we deliberately switched to above can have none at all
+        # ("iOS 26.0 is not installed" with zero eligible destinations).
+        # Explicitly download/install the platform for whichever Xcode is
+        # now selected rather than assume one is already present.
+        run: |
+          xcodebuild -downloadPlatform iOS
+          xcrun simctl list runtimes
+
       - name: Install CocoaPods dependencies
         working-directory: ios
         # maplibre-react-native wraps the MapLibre Native SDK, which is
