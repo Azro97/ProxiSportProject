@@ -74,19 +74,32 @@ jobs:
           USE_FRAMEWORKS: static
         run: pod install
 
+      - name: Pick an available iOS Simulator destination
+        working-directory: ios
+        # Unlike watchOS Simulator, iOS Simulator has no generic "Any iOS
+        # Simulator Device" placeholder destination - this has been an open
+        # gap since Xcode 14 (see developer.apple.com/forums/thread/716700).
+        # -sdk iphonesimulator alone and 'generic/platform=iOS Simulator'
+        # both failed here for the same reason. The robust fix is to ask
+        # the scheme itself what's actually installed on this runner and
+        # target a concrete device by id, rather than guess a name that
+        # may not exist on a given Xcode/runner image.
+        run: |
+          xcodebuild -showdestinations -workspace PP.xcworkspace -scheme PP -configuration Debug 2>&1 | tee destinations.txt
+          SIM_ID=$(grep -o 'platform:iOS Simulator, id:[A-F0-9-]*' destinations.txt | head -n1 | sed 's/.*id://')
+          if [ -z "$SIM_ID" ]; then
+            echo "No iOS Simulator destination found on this runner"
+            exit 1
+          fi
+          echo "Selected simulator id: $SIM_ID"
+          echo "SIM_ID=$SIM_ID" >> "$GITHUB_ENV"
+
       - name: Build for iOS Simulator
         working-directory: ios
-        # -sdk iphonesimulator alone wasn't enough on this Xcode version
-        # ("Found no destinations for the scheme 'PP'"), and the older
-        # 'generic/platform=iOS Simulator' form got misresolved against a
-        # physical device instead. 'platform=iOS Simulator,name=Any iOS
-        # Simulator Device' is Apple's documented placeholder destination
-        # for compiling against the simulator SDK without needing any
-        # concrete booted device.
         run: |
           xcodebuild build \
             -workspace PP.xcworkspace \
             -scheme PP \
             -configuration Debug \
-            -destination 'platform=iOS Simulator,name=Any iOS Simulator Device' \
+            -destination "id=$SIM_ID" \
             CODE_SIGNING_ALLOWED=NO
