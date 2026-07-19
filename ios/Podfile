@@ -36,5 +36,20 @@ target 'PP' do
       :mac_catalyst_enabled => false,
       # :ccache_enabled => true
     )
+
+    # Xcode 15+ made implicit C function declarations a hard error by
+    # default (previously just a warning). Some pods - maplibre-react-native
+    # in particular - predate that change and call C functions without a
+    # full declaration in scope, which now fails the build. Downgrade back
+    # to a warning across all pod targets rather than patching each
+    # library's source individually.
+    installer.pods_project.targets.each do |target|
+      target.build_configurations.each do |build_config|
+        other_cflags = build_config.build_settings['OTHER_CFLAGS'] || ['$(inherited)']
+        other_cflags = [other_cflags] if other_cflags.is_a?(String)
+        other_cflags << '-Wno-error=implicit-function-declaration'
+        build_config.build_settings['OTHER_CFLAGS'] = other_cflags
+      end
+    end
   end
 end
