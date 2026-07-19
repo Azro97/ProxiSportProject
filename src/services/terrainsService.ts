@@ -2,28 +2,40 @@
 
 import { Terrain } from '../models/Terrain';
 import { haversineDistance } from '../utils/geo';
+import { supabase } from './supabase';
 import { MOCK_TERRAINS } from './mock/mockData';
 
-// TODO: set to false and configure google-services.json to use real Firestore
-const USE_MOCK = true; // always mock for demo
+const USE_MOCK = false; // cut over to Supabase — see supabase/policies.sql (nearby_terrains)
+
+function toTerrain(row: any): Terrain {
+  return {
+    id: row.id,
+    nom: row.nom,
+    adresse: row.adresse,
+    ville: row.ville,
+    lat: row.lat,
+    lng: row.lng,
+  };
+}
 
 export async function getTerrainsByLocation(
   lat: number,
   lng: number,
   rayonKm: number,
 ): Promise<Terrain[]> {
-  let all: Terrain[];
-
   if (USE_MOCK) {
-    all = MOCK_TERRAINS;
-  } else {
-    const firestore = (await import('@react-native-firebase/firestore')).default;
-    const snapshot = await firestore().collection('terrains').get();
-    all = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Terrain));
+    // Geographic radius filter is client-side (Haversine) — see CLAUDE.md §6
+    return MOCK_TERRAINS.filter(t => haversineDistance(lat, lng, t.lat, t.lng) <= rayonKm);
   }
 
-  // Geographic radius filter is client-side (Haversine) — see CLAUDE.md §6
-  return all.filter(t => haversineDistance(lat, lng, t.lat, t.lng) <= rayonKm);
+  // Indexed radius search via PostGIS — see supabase/policies.sql (nearby_terrains)
+  const { data, error } = await supabase.rpc('nearby_terrains', {
+    in_lat: lat,
+    in_lng: lng,
+    in_radius_km: rayonKm,
+  });
+  if (error) throw error;
+  return (data ?? []).map(toTerrain);
 }
 
 export async function getTerrainById(id: string): Promise<Terrain | null> {
@@ -31,8 +43,11 @@ export async function getTerrainById(id: string): Promise<Terrain | null> {
     return MOCK_TERRAINS.find(t => t.id === id) ?? null;
   }
 
-  const firestore = (await import('@react-native-firebase/firestore')).default;
-  const doc = await firestore().collection('terrains').doc(id).get();
-  if (!doc.exists) return null;
-  return { id: doc.id, ...doc.data() } as Terrain;
+  const { data, error } = await supabase
+    .from('terrains')
+    .select('id, nom, adresse, ville, lat, lng')
+    .eq('id', id)
+    .maybeSingle();
+  if (error) throw error;
+  return data ? toTerrain(data) : null;
 }

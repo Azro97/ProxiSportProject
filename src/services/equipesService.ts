@@ -1,13 +1,23 @@
 // src/services/equipesService.ts
 
 import { Equipe } from '../models/Equipe';
+import { supabase } from './supabase';
 import { MOCK_EQUIPES } from './mock/mockData';
 
-// TODO: set to false and configure google-services.json to use real Firestore
-const USE_MOCK = true; // always mock for demo
+const USE_MOCK = false; // cut over to Supabase
 
-// Session-level cache — Firestore is only read once per app launch
+// Session-level cache — only read once per app launch
 let _equipesCache: Equipe[] | null = null;
+
+function toEquipe(row: any): Equipe {
+  return {
+    id: row.id,
+    nom: row.nom,
+    sport: row.sport,
+    region: row.region,
+    departement: row.departement,
+  };
+}
 
 export async function getAllEquipes(): Promise<Equipe[]> {
   if (_equipesCache) return _equipesCache;
@@ -15,9 +25,9 @@ export async function getAllEquipes(): Promise<Equipe[]> {
     _equipesCache = [...MOCK_EQUIPES];
     return _equipesCache;
   }
-  const firestore = (await import('@react-native-firebase/firestore')).default;
-  const snapshot = await firestore().collection('equipes').get();
-  _equipesCache = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Equipe));
+  const { data, error } = await supabase.from('equipes').select('id, nom, sport, region, departement');
+  if (error) throw error;
+  _equipesCache = (data ?? []).map(toEquipe);
   return _equipesCache;
 }
 
@@ -26,10 +36,13 @@ export async function getEquipeById(id: string): Promise<Equipe | null> {
     return MOCK_EQUIPES.find(e => e.id === id) ?? null;
   }
 
-  const firestore = (await import('@react-native-firebase/firestore')).default;
-  const doc = await firestore().collection('equipes').doc(id).get();
-  if (!doc.exists) return null;
-  return { id: doc.id, ...doc.data() } as Equipe;
+  const { data, error } = await supabase
+    .from('equipes')
+    .select('id, nom, sport, region, departement')
+    .eq('id', id)
+    .maybeSingle();
+  if (error) throw error;
+  return data ? toEquipe(data) : null;
 }
 
 export async function getEquipesBySport(sport: string): Promise<Equipe[]> {
@@ -37,17 +50,16 @@ export async function getEquipesBySport(sport: string): Promise<Equipe[]> {
     return MOCK_EQUIPES.filter(e => e.sport === sport);
   }
 
-  const firestore = (await import('@react-native-firebase/firestore')).default;
-  const snapshot = await firestore()
-    .collection('equipes')
-    .where('sport', '==', sport)
-    .get();
-  return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Equipe));
+  const { data, error } = await supabase
+    .from('equipes')
+    .select('id, nom, sport, region, departement')
+    .eq('sport', sport);
+  if (error) throw error;
+  return (data ?? []).map(toEquipe);
 }
 
 /**
  * Search equipes by name, region or departement (case-insensitive, substring).
- * Falls back to full client-side filter on Firestore (no full-text index needed for v1).
  */
 export async function searchEquipes(query: string): Promise<Equipe[]> {
   const q = query.trim().toLowerCase();
@@ -62,15 +74,14 @@ export async function searchEquipes(query: string): Promise<Equipe[]> {
     );
   }
 
-  // Firestore has no full-text search — fetch all and filter client-side
-  const firestore = (await import('@react-native-firebase/firestore')).default;
-  const snapshot = await firestore().collection('equipes').get();
-  return snapshot.docs
-    .map(doc => ({ id: doc.id, ...doc.data() } as Equipe))
-    .filter(
-      e =>
-        e.nom.toLowerCase().includes(q) ||
-        e.region.toLowerCase().includes(q) ||
-        e.departement.toLowerCase().includes(q),
-    );
+  // Real server-side search — strip characters that are meaningful to
+  // PostgREST's or()/ilike filter syntax (%, _, comma, parens) before
+  // interpolating the term.
+  const safe = q.replace(/[%_,()]/g, '');
+  const { data, error } = await supabase
+    .from('equipes')
+    .select('id, nom, sport, region, departement')
+    .or(`nom.ilike.%${safe}%,region.ilike.%${safe}%,departement.ilike.%${safe}%`);
+  if (error) throw error;
+  return (data ?? []).map(toEquipe);
 }

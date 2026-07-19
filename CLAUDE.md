@@ -7,6 +7,7 @@
 3. Gradle cache dir exists (Windows): `New-Item -ItemType Directory -Force -Path C:\Temp\pp-gradle`
 4. Dependencies installed: `npm install` (also auto-applies patches via postinstall)
 5. Metro bundler running from the project root: `npx react-native start`
+6. **Windows long paths enabled** (`LongPathsEnabled=1` under `HKLM:\SYSTEM\CurrentControlSet\Control\FileSystem`, or Settings → "For developers" → "End-to-end long paths") + a **restart** after enabling. Without this, a fresh/cold native build fails with `ninja: error: Stat(...) Filename longer than 260 characters` on `react-native-safe-area-context`'s C++ codegen — this can stay latent for a long time because Gradle/CMake caches the native build, then suddenly reappears the next time something (e.g. an `npm install` that changes `node_modules`) forces a clean native reconfigure.
 
 ## Build & Run
 
@@ -100,13 +101,14 @@ cd android
 | Safe area | All screens use `useSafeAreaInsets` or `SafeAreaView` from `react-native-safe-area-context` |
 | Tab bar safe area | `height: 60 + insets.bottom` — gesture nav phones handled |
 | GPS intro screen | First-launch onboarding with animated dot, "Autoriser" / "Passer", persisted via AsyncStorage |
+| Backend: Supabase | Migrated off Firebase Firestore entirely — see "Backend migration" section above. All 4 services live on Supabase (`USE_MOCK = false`). |
 
 ## TODO — Remaining work
 
 ### High priority (needed for real users)
 
-- [ ] **Authentication** — No login/signup flow. `Inscription.capitaine_uid` requires a real user. Use Firebase Auth (email/password or Google sign-in). Add `AuthScreen` + guard navigation behind auth state.
-- [ ] **Mes inscriptions** — After signing up for a tournament there is no screen to view registrations. Add a "Mes tournois" section (stack screen or new tab) reading `inscriptions` Firestore collection filtered by `capitaine_uid`.
+- [ ] **Authentication** — No login/signup flow. `Inscription.capitaine_uid` requires a real user. Use Supabase Auth (email/password or OAuth). Add `AuthScreen` + guard navigation behind auth state. Note: RLS in `supabase/policies.sql` is currently designed for the zero-auth case (public read, RPC-gated write) — adding real auth means revisiting those policies, not just bolting a login screen on top.
+- [ ] **Mes inscriptions** — After signing up for a tournament there is no screen to view registrations. Add a "Mes tournois" section (stack screen or new tab) reading the Supabase `inscriptions` table filtered by `capitaine_uid`.
 - [ ] **Payment (Stripe)** — `Inscription.stripe_payment_intent_id` exists but the modal just shows a mock confirmation. Integrate `@stripe/stripe-react-native`, create a Cloud Function to generate a `PaymentIntent`, present the payment sheet in step 2 of `InscriptionModal`.
 
 ### Medium priority (UX polish)
@@ -114,22 +116,42 @@ cd android
 - [ ] **Dark mode toggle** — Removed from all screens. `themeStore` still exists. Add a toggle in a settings screen or a long-press gesture somewhere.
 - [ ] **Live match indicator** — `liveRed` color in theme, `LiveDot` component exists in the other frontend. Port to `MatchCard` / `MatchsScreen` for in-progress matches.
 - [ ] **Create / join a team** — Users can search and view teams but cannot create one. Add a "Créer mon équipe" CTA in `ClassementsScreen` (team search screen).
-- [ ] **Error states** — No UI shown when Firestore/network fails. Add error boundaries or inline error views.
+- [ ] **Error states** — No UI shown when Supabase/network fails. Add error boundaries or inline error views.
 
 ### Before production
 
-- [ ] Switch to real Firebase data (`USE_MOCK = false`) + seed Firestore collections
-- [ ] Algolia integration for team search (see §1 in "Before deploying to production" below)
-- [ ] Firebase `google-services.json` / `GoogleService-Info.plist` with real project
+- [x] Switch off mock data — done, all 4 services run on Supabase (`USE_MOCK = false`), see "Backend migration" above
+- [ ] Full on-device emulator pass of the Supabase cutover (Carte, Matchs, Résultats, team search, tournaments, admin flow, registration) — blocked on a Windows long-path restart, not yet re-verified visually
+- [ ] Algolia integration for team search (see §1 in "Before deploying to production" below) — still relevant on Supabase; `searchEquipes` now does a real server-side `ilike` instead of Firestore's full-fetch-then-filter, which is fine at current scale (70 équipes) but Algolia is still the right call at real-world scale
 - [ ] App icons + splash screen (both platforms)
 - [ ] iOS first-time setup (CocoaPods, Xcode signing)
 - [ ] Release keystore + `reactNativeArchitectures` restored for multi-ABI APK
 
 ## Architecture
 
-- Stack: React Native (bare), TypeScript, Zustand, Firebase Firestore, MapLibre GL
-- Dependency direction: `screens -> stores -> services -> firebase` (one-way)
+- Stack: React Native (bare), TypeScript, Zustand, **Supabase (Postgres + PostGIS)**, MapLibre GL
+- Dependency direction: `screens -> stores -> services -> supabase` (one-way)
 - Map library: `@maplibre/maplibre-react-native@10.4.2` (pinned — v11+ requires React 19)
+
+## Backend migration: Firebase Firestore → Supabase (2026-07-19)
+
+The app **no longer uses Firebase**. `@react-native-firebase/app` and `@react-native-firebase/firestore` were removed from `package.json`; `src/services/firebase.ts` was replaced by `src/services/supabase.ts` (a single `createClient()` singleton, config via `.env` / `react-native-dotenv`, `@env` module — see `src/env.d.ts`).
+
+**Why:** Firestore has no spatial index, so `getTerrainsByLocation()` did a full-collection scan + client-side Haversine filter — this scaled badly on both cost and query latency as terrain count grew. Supabase/PostGIS gives an indexed radius query natively. Since the app had never actually run against a live Firestore project (`google-services.json` was always a placeholder, `USE_MOCK` was hardcoded `true` everywhere), there was no live data to migrate — only the mock dataset needed to become the Postgres seed.
+
+**What changed, concretely:**
+- All 4 services (`terrainsService`, `equipesService`, `matchsService`, `tournoiService`) were rewritten to call `supabase` instead of `firestore()`, keeping every exported function's name/signature/return shape **identical** — zero screen or store files changed.
+- Postgres schema lives in `supabase/schema.sql` (tables, snake_case columns, PostGIS `geography` column + GIST index on `terrains`), `supabase/policies.sql` (RLS + two RPC functions), `supabase/seed.sql` (generated from `src/services/mock/mockData.ts`, using `now() ± interval` SQL expressions so re-seeding always regenerates "today-relative" demo dates instead of going stale).
+- **`nearby_terrains(in_lat, in_lng, in_radius_km)`** RPC replaces the client-side Haversine filter for `getTerrainsByLocation` — a single indexed `ST_DWithin` query instead of a full-table scan.
+- **`create_inscription(...)`** RPC replaces the old bare insert for `createInscription` — inserts the row **and** increments `tournois.equipes_inscrites` atomically in one transaction. This also fixed a real pre-existing bug: the old Firestore "prod" code path never incremented that counter (only the mock branch did).
+- Also fixed while rewriting: `getTournois(sport, region)`'s Firestore "prod" branch never actually applied the `sport`/`region` filters (only the mock branch did) — the Supabase version does.
+- **RLS**: the app has no end-user auth (same as before), so policies are public-read on every table, insert-only (no update/delete) on `tournois` and via the RPC on `inscriptions`. The anon key is safe to ship client-side — its authority is fully bounded by these policies. The `service_role`/secret key is **never** used by the app, only for one-off admin/seed operations run manually against the project.
+- `getRegions()` / `getDepartements()` in `matchsService.ts` **stay synchronous** (`string[]`, not `Promise`) and keep serving the hardcoded `MOCK_REGIONS`/`MOCK_DEPARTEMENTS` constants regardless of `USE_MOCK` — French administrative regions are static enough to treat as app config, and making them async would have broken every screen calling them without `await`.
+- `USE_MOCK` stays as a per-file toggle (not removed) — each of the 4 services can independently flip back to `true` if its Supabase path ever misbehaves, with zero blast radius on the others.
+- Supabase CLI installed as a devDependency (`npm install supabase --save-dev`, invoked via `npx supabase`) — global install isn't supported by the CLI.
+- Live project: schema/policies/seed already applied and verified (row counts, `nearby_terrains`, `create_inscription` atomicity, the composite `getMatchs` filter, and `createTournoi` all directly tested against the live database).
+
+**Status as of this write-up:** all 4 services have `USE_MOCK = false` and are verified working against the live Supabase project via direct API/client testing. Full on-device emulator verification (Carte markers, Matchs list/results, team search, tournament list/detail, registration, admin tournament creation) is still pending — blocked on an unrelated pre-existing Windows native-build issue (see below), waiting on a PC restart to clear.
 
 ## Map — MapLibre GL
 
@@ -159,29 +181,23 @@ cd android
 
 ## Before deploying to production (iOS & Android)
 
-### 1. Team search — switch to Algolia
+### 1. Team search — consider Algolia (or Postgres full-text) before real scale
 
-Currently `getAllEquipes()` reads **every team document** from Firestore on first load (cached in memory for the session). This is fine in dev but expensive at scale:
+`getAllEquipes()` still reads the **whole `equipes` table** on first load (cached in memory for the session) — that part of the design didn't change in the Supabase migration. `searchEquipes()` itself, though, now does a real server-side `.ilike()` query (see "Backend migration" above) instead of the old Firestore "fetch everything, filter client-side" approach, so the search box specifically is no longer the concern.
 
-| Teams | Daily users | Reads/day | Firestore cost/month |
-|-------|------------|-----------|----------------------|
-| 500   | 1,000      | 500K      | ~$1.80 |
-| 2,000 | 5,000      | 10M       | ~$36 |
-| 10,000| 20,000     | 200M      | ~$720 |
+Unlike Firestore, **Postgres/Supabase doesn't bill per-row-read** — the `getAllEquipes()` full-table-fetch doesn't have the same runaway per-read cost curve the old Firestore version did. The remaining reasons to eventually move off it are quality and payload size, not billing:
+- `ilike` has no typo tolerance and gets slower (though still fine at current scale — 70 équipes) as the team count grows into the thousands.
+- `getAllEquipes()`'s full-table fetch means the payload sent to the client grows linearly with team count, with nothing capping it.
 
-**Fix:** Integrate Algolia before launch.
-- Install the **official Firebase/Algolia extension** in the Firebase console — it auto-syncs Firestore writes to an Algolia index, zero manual work.
-- Replace `getAllEquipes()` in `ClassementsScreen` with an Algolia search call.
-- Firestore reads for search drop to zero; you only read the full document when a user taps a result.
-- **Cost**: Algolia free tier = 10K operations/month (early stage); paid ~$50/month for 100K ops.
-- Algolia gives typo tolerance and better relevance out of the box.
+**Fix, when it matters:** either integrate Algolia (sync via a Postgres trigger + Edge Function instead of the old Firebase/Algolia extension, since that was Firestore-specific), or add a `pg_trgm` GIN index and lean on Postgres's own trigram similarity search — cheaper to operate than Algolia and often good enough. Not urgent at 70 équipes.
 
-### 2. Firebase setup (required for both platforms)
+### 2. Supabase setup (done — kept here as a reference for a fresh machine)
 
-- [ ] Add real `google-services.json` (Android) from Firebase console → Project settings → Android app
-- [ ] Add real `GoogleService-Info.plist` (iOS) from Firebase console → Project settings → iOS app
-- [ ] Set `USE_MOCK = false` (or remove the `__DEV__` flag) in all service files once Firestore data is populated
-- [ ] Create Firestore collections: `equipes`, `matchs`, `terrains` and seed with real data
+- [x] Create a Supabase project (region: Frankfurt/`eu-central-1` or London/`eu-west-2` for lowest latency to France)
+- [x] Run, in order: `supabase/schema.sql` → `supabase/policies.sql` → `supabase/seed.sql` (Supabase Studio SQL editor, or `npx supabase` CLI)
+- [x] Set `SUPABASE_URL` / `SUPABASE_ANON_KEY` in `.env` (gitignored; `.env.example` has the placeholder shape) — the anon key is safe to ship, RLS bounds its authority
+- [x] Set `USE_MOCK = false` in all 4 service files
+- [ ] Never put the `service_role`/secret key in `.env` or anywhere in the app — it's only used for one-off manual admin/seed operations against the project, never at runtime
 
 ### 3. iOS — first-time setup
 
@@ -195,8 +211,8 @@ iOS has never been built for this project. Steps needed:
 
 ### 4. Release checklist (both platforms)
 
-- [ ] Algolia integration done (see §1 above)
-- [ ] Real Firebase data populated and `USE_MOCK = false`
+- [ ] Algolia (or `pg_trgm`) integration done, if team count has grown enough to warrant it (see §1 above)
+- [x] Real Supabase data populated and `USE_MOCK = false` — done, see "Backend migration" above
 - [ ] Generate Android `release.keystore` (see "Release / Deploy to Android" section above)
 - [ ] `reactNativeArchitectures=armeabi-v7a,arm64-v8a,x86,x86_64` restored in `gradle.properties`
 - [ ] iOS provisioning profile + signing configured in Xcode
