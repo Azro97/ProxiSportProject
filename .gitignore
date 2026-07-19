@@ -7,7 +7,9 @@ local.properties
 *.keystore
 !debug.keystore
 android/keystore.properties
-ios/
+ios/Pods/
+ios/build/
+ios/*.xcworkspace
 *.orig.*
 *.jsbundle
 .bundle/
