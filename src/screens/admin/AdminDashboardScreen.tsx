@@ -20,6 +20,7 @@ import { sportColors } from '../../theme';
 import { useColors } from '../../hooks/useColors';
 import DashboardStatCard from './components/DashboardStatCard';
 import { styles } from './AdminDashboardScreen.styles';
+import ErrorState from '../../components/ErrorState';
 
 type Props = NativeStackScreenProps<AdminStackParamList, 'AdminDashboard'>;
 
@@ -42,6 +43,7 @@ export default function AdminDashboardScreen({ navigation }: Props) {
 
   const [tournois, setTournois]     = useState<Tournoi[]>([]);
   const [loading, setLoading]       = useState(true);
+  const [error, setError]           = useState(false);
   const [refreshing, setRefreshing] = useState(false);
 
   const load = useCallback(async (isRefresh = false) => {
@@ -50,6 +52,9 @@ export default function AdminDashboardScreen({ navigation }: Props) {
     try {
       const data = await getTournois();
       setTournois(data);
+      setError(false);
+    } catch {
+      setError(true);
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -160,6 +165,12 @@ export default function AdminDashboardScreen({ navigation }: Props) {
         <View style={styles.loader}>
           <ActivityIndicator size="large" color="#6366f1" />
         </View>
+      ) : error ? (
+        <ErrorState
+          title="Impossible de charger les tournois"
+          body="Vérifiez votre connexion internet et réessayez."
+          onRetry={() => load()}
+        />
       ) : (
         <FlatList
           data={tournois}
@@ -175,19 +186,30 @@ export default function AdminDashboardScreen({ navigation }: Props) {
               <Text style={[styles.listTitle, { color: colors.textPrimary }]}>
                 Mes tournois <Text style={{ color: colors.textTertiary }}>({total})</Text>
               </Text>
-              <TouchableOpacity
-                onPress={() => navigation.navigate('AdminCreateTournoi')}
-                style={styles.createBtn}
-              >
-                <LinearGradient
-                  colors={['#6366f1', '#8b5cf6']}
-                  style={styles.createBtnGrad}
-                  start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
+              <View style={{ flexDirection: 'row', gap: 8 }}>
+                <TouchableOpacity
+                  onPress={() => navigation.navigate('AdminCreateEquipe')}
+                  style={styles.createBtn}
                 >
-                  <Plus size={15} color="#fff" strokeWidth={2.5} />
-                  <Text style={styles.createBtnText}>Créer</Text>
-                </LinearGradient>
-              </TouchableOpacity>
+                  <View style={[styles.createBtnGrad, { backgroundColor: 'rgba(99,102,241,0.12)' }]}>
+                    <Users size={15} color="#6366f1" strokeWidth={2.5} />
+                    <Text style={[styles.createBtnText, { color: '#6366f1' }]}>Équipe</Text>
+                  </View>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={() => navigation.navigate('AdminCreateTournoi')}
+                  style={styles.createBtn}
+                >
+                  <LinearGradient
+                    colors={['#6366f1', '#8b5cf6']}
+                    style={styles.createBtnGrad}
+                    start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
+                  >
+                    <Plus size={15} color="#fff" strokeWidth={2.5} />
+                    <Text style={styles.createBtnText}>Créer</Text>
+                  </LinearGradient>
+                </TouchableOpacity>
+              </View>
             </View>
           }
           ListEmptyComponent={

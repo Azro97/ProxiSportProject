@@ -2,6 +2,7 @@
 
 import { Equipe } from '../models/Equipe';
 import { supabase } from './supabase';
+import { withTimeout } from './withTimeout';
 
 // Session-level cache — only read once per app launch
 let _equipesCache: Equipe[] | null = null;
@@ -18,27 +19,27 @@ function toEquipe(row: any): Equipe {
 
 export async function getAllEquipes(): Promise<Equipe[]> {
   if (_equipesCache) return _equipesCache;
-  const { data, error } = await supabase.from('equipes').select('id, nom, sport, region, departement');
+  const { data, error } = await withTimeout(supabase.from('equipes').select('id, nom, sport, region, departement'));
   if (error) throw error;
   _equipesCache = (data ?? []).map(toEquipe);
   return _equipesCache;
 }
 
 export async function getEquipeById(id: string): Promise<Equipe | null> {
-  const { data, error } = await supabase
+  const { data, error } = await withTimeout(supabase
     .from('equipes')
     .select('id, nom, sport, region, departement')
     .eq('id', id)
-    .maybeSingle();
+    .maybeSingle());
   if (error) throw error;
   return data ? toEquipe(data) : null;
 }
 
 export async function getEquipesBySport(sport: string): Promise<Equipe[]> {
-  const { data, error } = await supabase
+  const { data, error } = await withTimeout(supabase
     .from('equipes')
     .select('id, nom, sport, region, departement')
-    .eq('sport', sport);
+    .eq('sport', sport));
   if (error) throw error;
   return (data ?? []).map(toEquipe);
 }
@@ -46,6 +47,21 @@ export async function getEquipesBySport(sport: string): Promise<Equipe[]> {
 /**
  * Search equipes by name, region or departement (case-insensitive, substring).
  */
+/** Admin-only team creation — see AdminCreateEquipeScreen. */
+export async function createEquipe(data: Omit<Equipe, 'id'>): Promise<string> {
+  const id = 'e_' + Date.now();
+  const { error } = await withTimeout(supabase.from('equipes').insert({
+    id,
+    nom: data.nom,
+    sport: data.sport,
+    region: data.region,
+    departement: data.departement,
+  }));
+  if (error) throw error;
+  if (_equipesCache) _equipesCache = [..._equipesCache, { id, ...data }];
+  return id;
+}
+
 export async function searchEquipes(query: string): Promise<Equipe[]> {
   const q = query.trim().toLowerCase();
   if (!q) return [];
@@ -54,10 +70,10 @@ export async function searchEquipes(query: string): Promise<Equipe[]> {
   // PostgREST's or()/ilike filter syntax (%, _, comma, parens) before
   // interpolating the term.
   const safe = q.replace(/[%_,()]/g, '');
-  const { data, error } = await supabase
+  const { data, error } = await withTimeout(supabase
     .from('equipes')
     .select('id, nom, sport, region, departement')
-    .or(`nom.ilike.%${safe}%,region.ilike.%${safe}%,departement.ilike.%${safe}%`);
+    .or(`nom.ilike.%${safe}%,region.ilike.%${safe}%,departement.ilike.%${safe}%`));
   if (error) throw error;
   return (data ?? []).map(toEquipe);
 }
