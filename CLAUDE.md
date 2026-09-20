@@ -129,21 +129,28 @@ cd android
 
 ### High priority (needed for real users)
 
-- [ ] **Authentication** — No login/signup flow. `Inscription.capitaine_uid` requires a real user. Use Supabase Auth (email/password or OAuth). Add `AuthScreen` + guard navigation behind auth state. Note: RLS in `supabase/policies.sql` is currently designed for the zero-auth case (public read, RPC-gated write) — adding real auth means revisiting those policies, not just bolting a login screen on top.
-- [ ] **Mes inscriptions** — After signing up for a tournament there is no screen to view registrations. Add a "Mes tournois" section (stack screen or new tab) reading the Supabase `inscriptions` table filtered by `capitaine_uid`.
-- [ ] **Payment (Stripe)** — `Inscription.stripe_payment_intent_id` exists but the modal just shows a mock confirmation. Integrate `@stripe/stripe-react-native`, create a Cloud Function to generate a `PaymentIntent`, present the payment sheet in step 2 of `InscriptionModal`.
+- [x] **Authentication** — Optional Supabase Auth (email/password), gated only around tournament registration and "Mes inscriptions" — browsing stays fully open, no login wall. `src/stores/authStore.ts` + `src/services/authService.ts` + `src/providers/AuthProvider.tsx`. `inscriptions.capitaine_uid` is now a nullable `uuid` FK to `auth.users`, derived server-side in `create_inscription()` via `auth.uid()` (never a client param) — guests still register with `capitaine_uid = null`, exactly as before. **Manual steps still needed on a fresh machine**: run `supabase/migration_auth_capitaine_uid.sql` once against the live project (already-bootstrapped `schema.sql`/`seed.sql` are updated for future fresh installs, but don't touch existing data); deploy `supabase/functions/send-inscription-confirmation` (`npx supabase login` + `link` + `functions deploy`) and set a `RESEND_API_KEY` secret for confirmation emails to actually send.
+- [x] **Mes inscriptions** — `src/screens/auth/MesInscriptionsScreen.tsx`, reachable via the account icon in `TournoiListScreen`'s header (next to the admin Shield icon) or the modal's "Se connecter" path. Lists the signed-in user's registrations via `getMyInscriptions()` in `tournoiService.ts`. Also supports cancelling a registration (`cancel_inscription` RPC, signed-in users only) and account deletion (`delete-account` Edge Function, required for Apple Guideline 5.1.1(v) once iOS ships).
+- [ ] **Payment (Stripe)** — code complete but **not yet configured — paid registrations do not work today**: webhook-driven confirmation (`create-payment-intent` + `stripe-webhook` Edge Functions, both deployed), `@stripe/stripe-react-native` PaymentSheet wired into `InscriptionModal`'s paid path, free tournaments untouched. New RPCs `create_pending_inscription_paiement`/`release_pending_inscription`/`confirm_inscription_paiement` in `supabase/policies.sql` (service_role-only), plus real CHECK constraints on `inscriptions.statut` and `tournois.equipes_inscrites` that didn't exist before.
+  **Still to do before this works at all** (none of this is done yet):
+  - [ ] Run `supabase/migration_stripe_payments.sql` once against the live project
+  - [ ] Create a Stripe account (test mode)
+  - [ ] Set `STRIPE_SECRET_KEY` / `STRIPE_WEBHOOK_SECRET` Edge Function secrets
+  - [ ] Register the webhook endpoint in the Stripe Dashboard (`payment_intent.succeeded` + `payment_intent.canceled`)
+  - [ ] Replace the `pk_test_REPLACE_ME` placeholder in `.env` with a real `STRIPE_PUBLISHABLE_KEY`
+  Free tournaments are unaffected either way.
+  **Deliberately deferred, add later**: Apple Pay is NOT wired up — `initPaymentSheet` only enables standard card entry today. Apple Pay needs its own native setup (merchant identifier, Xcode "Apple Pay" capability, `Info.plist` entry) that isn't worth doing before this app has been built for iOS even once (see iOS section below). When it's time: add `applePay: { merchantCountryCode: 'FR' }` to `initPaymentSheet`'s options in `InscriptionModal.tsx`, plus the native config.
 
 ### Medium priority (UX polish)
 
-- [ ] **Dark mode toggle** — Removed from all screens. `themeStore` still exists. Add a toggle in a settings screen or a long-press gesture somewhere.
 - [ ] **Live match indicator** — `liveRed` color in theme, `LiveDot` component exists in the other frontend. Port to `MatchCard` / `MatchsScreen` for in-progress matches.
-- [ ] **Create / join a team** — Users can search and view teams but cannot create one. Add a "Créer mon équipe" CTA in `ClassementsScreen` (team search screen).
-- [ ] **Error states** — No UI shown when Supabase/network fails. Add error boundaries or inline error views.
+- [x] **Create a team** — deliberately admin-only, not consumer-facing (confirmed with user: `equipes` are official club teams referenced by real scheduled league matches, distinct from the free-text team name any user already types when registering for a tournament). `AdminCreateEquipeScreen.tsx`, reachable via the "Équipe" button next to "Créer" in `AdminDashboardScreen`. **Manual step**: re-run `supabase/policies.sql` against the live project (now fully idempotent, safe to run wholesale) to pick up the new `equipes` insert policy.
+- [x] **Error states** — `src/components/ErrorState.tsx` (icon + message + retry) now used across every screen/component that fetches data (Carte, Matchs, Tournois, Classements, admin screens, `InscriptionModal`), instead of silently showing an empty state on failure. Paired with `src/services/withTimeout.ts` so a stalled Supabase call fails within 10s instead of hanging indefinitely.
 
 ### Before production
 
 - [x] Switch off mock data — done; `USE_MOCK` flags and `src/services/mock/mockData.ts` have since been removed entirely, see "Backend migration" above
-- [ ] Full on-device emulator pass of the Supabase cutover (Carte, Matchs, Résultats, team search, tournaments, admin flow, registration) — blocked on a Windows long-path restart, not yet re-verified visually
+- [ ] Full on-device emulator pass — Carte (tiles + markers), Tournois list/detail, Login/Mes Inscriptions, and the admin dashboard have all been re-verified live on-device since the Supabase cutover. Still untested end-to-end on-device: a full paid registration (Stripe PaymentSheet → webhook → confirmation email) and the new admin "Créer une équipe" screen — both blocked on the manual Stripe/policy setup steps documented above, not a code issue.
 - [ ] Algolia integration for team search (see §1 in "Before deploying to production" below) — still relevant on Supabase; `searchEquipes` now does a real server-side `ilike` instead of Firestore's full-fetch-then-filter, which is fine at current scale (70 équipes) but Algolia is still the right call at real-world scale
 - [ ] App icons + splash screen (both platforms)
 - [ ] iOS first-time setup (CocoaPods, Xcode signing)
@@ -174,6 +181,30 @@ The app **no longer uses Firebase**. `@react-native-firebase/app` and `@react-na
 **Status as of this write-up:** all 4 services have `USE_MOCK = false` and are verified working against the live Supabase project via direct API/client testing. Full on-device emulator verification (Carte markers, Matchs list/results, team search, tournament list/detail, registration, admin tournament creation) is still pending — blocked on an unrelated pre-existing Windows native-build issue (see below), waiting on a PC restart to clear.
 
 **Update (2026-07-19, later same day) — mock data removed entirely:** the `USE_MOCK` flag and every `if (USE_MOCK) {...}` fallback branch were deleted from all 4 services; `src/services/mock/mockData.ts` no longer exists. This includes `getRegions()` / `getDepartements()` in `matchsService.ts`, previously the one deliberate exception (documented above as staying synchronous and mock-backed) — they're now `async` functions backed by the `regions`/`departements` Postgres tables (already present in `schema.sql` and fully seeded in `seed.sql`, mirroring the old mock arrays exactly), with an in-memory cache since the data never changes at runtime. Both call sites (`AffinerFilter.tsx`, `AdminCreateTournoiScreen.tsx`) were updated to `await` them via `useEffect`/`useState` instead of reading synchronously. `AdminCreateTournoiScreen.tsx` also had its own direct `MOCK_REGIONS`/`MOCK_DEPARTEMENTS` imports (a second, previously undocumented consumer of the mock arrays) migrated to the same async service functions. The app now has zero mock data paths — everything reads from Supabase.
+
+## Seed data: FFVB Hauts-de-France volleyball league (2026-09-20)
+
+Real match data for the regional volleyball league was scraped from the FFVB Hauts-de-France site (`https://www.ffvbbeach.org/ffvbapp/resu/vbspo_home.php?codent=LIFL`) and loaded as `supabase/seed_volley_hdf.sql`, applied directly against the live Supabase project (SQL Editor). Final counts: **91 terrains, 189 équipes, 1 366 matchs**, covering the full season, both `hdf` and `grand-est` regions (several départements added), senior divisions and the M21/M18 youth divisions.
+
+**Domain model change — `Division` is no longer 3 generic levels.** `src/models/Filtre.ts` now defines specific competition levels instead of the old `'Nationale' | 'Régionale' | 'Départementale'`:
+```ts
+export type Division =
+  | 'Nationale 1' | 'Nationale 2' | 'Nationale 3'
+  | 'Régionale 1' | 'Régionale 2' | 'Régionale 3'
+  | 'Départementale 1' | 'Départementale 2' | 'Départementale 3'
+  | 'Juniors M21' | 'Excellence M18' | 'Honneur M18' | '4x4 M18';
+```
+A separate `DivisionGroupe` (`'Nationale' | 'Régionale' | 'Départementale' | 'Jeunes'`) plus a `DIVISION_GROUPS` map groups these for the filter UI, so youth (M18/M21) divisions sit in their own "Jeunes" group and never mix into an adult division filter. This touches the filter UI (`AffinerFilter.tsx`, `MatchsScreen.tsx`, `MatchGroupList.tsx`) and `matchsService.ts`'s `.in('division', ...)` query — all already updated, not just the type.
+
+**Seed generation pipeline** (one-off Node scripts, run outside the app — not part of the RN bundle, no new npm deps):
+- `geocode_and_build.js` — geocodes each scraped venue via **Nominatim** (OpenStreetMap), restricted to a Hauts-de-France/Grand-Est bounding box (`viewbox` + `bounded=1`) so ambiguous venue names don't resolve to a same-named place elsewhere in France. Deliberately has **no** unanchored nationwide fallback — an unresolved venue stays unresolved rather than getting a wrong-region guess.
+- `overrides.js` — a hand-researched map of `"VENUE NAME|TOWN" → corrected address` for venues Nominatim geocoded poorly or ambiguously (~58 entries).
+- `apply_overrides.js` — re-resolves each override address through France's official **BAN** API (`api-adresse.data.gouv.fr`) for authoritative coordinates, writing `addressOverride: true` + `banScore` back into `venues_geocoded.json`.
+- `build_sql.js` — turns the geocoded venues + scraped matches into `seed_volley_hdf.sql`. Terrain ids are deterministic slugs (venue name + resolved town).
+
+**Bug fixed — `terrains_pkey` duplicate key violation.** Two physically distinct venues both named "Complexe Léo Lagrange" exist in Noyelles-sous-Lens (different streets, different coordinates), so the venue-name+town slug produced the **same** terrain id for both, and the seed insert failed with `23505 duplicate key value violates unique constraint "terrains_pkey"`. Fixed in `build_sql.js` with a `usedTerrainIds` `Set`-based uniqueness guard: on a slug collision, the id gets a numeric suffix (`-2`, `-3`, ...). The matches actually played at the second venue (`CMX010`, `CMX012`, `CFX013`, `CFX016`) were repointed to the suffixed id; matches at the original venue kept the base id. Verified with an exhaustive duplicate-id + referential-integrity check across all 5 insertable tables before re-running, then confirmed live: the corrected file ran end-to-end in the Supabase SQL Editor with `Success. No rows returned` (i.e. zero errors across the full batch of inserts).
+
+**Known caveats (disclosed, non-blocking):** the Rethel venue address in `overrides.js` is an educated guess, not independently confirmed; two low-impact venues are geographically plausible but weren't independently verified. Both are low-severity and don't affect referential integrity or app behavior.
 
 ## Map — MapLibre GL
 
@@ -228,8 +259,9 @@ iOS has never been built for this project. Steps needed:
 - Run `cd ios && pod install`
 - Open `ios/ProxiSport.xcworkspace` in Xcode
 - Set Bundle ID, signing team, and provisioning profile in Xcode → Signing & Capabilities
-- Add `GoogleService-Info.plist` to the Xcode project (drag into project tree, copy if needed)
+- No native config file needed for the backend — `@supabase/supabase-js` is a plain JS/REST client, so the same `.env` values used on Android just work (unlike the old Firebase setup, no `GoogleService-Info.plist` needed)
 - Build: `npx react-native run-ios` or archive via Xcode for App Store submission
+- `@stripe/stripe-react-native` will need `pod install` to pull in `stripe-ios`; Apple Pay isn't wired up (not needed for the current PaymentSheet-only flow), so no merchant identifier/capability setup required yet
 
 ### 4. Release checklist (both platforms)
 
