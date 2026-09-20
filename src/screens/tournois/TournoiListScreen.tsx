@@ -25,7 +25,7 @@ type Props = CompositeScreenProps<
   NativeStackScreenProps<RootStackParamList>
 >;
 
-const SPORTS = [
+const SPORTS: { key: string | null; label: string }[] = [
   { key: null,       label: 'Tous' },
   { key: 'foot',     label: '⚽ Foot' },
   { key: 'basket',   label: '🏀 Basket' },
@@ -33,7 +33,7 @@ const SPORTS = [
   { key: 'volley',   label: '🏐 Volley' },
 ];
 
-const STATUTS = [
+const STATUTS: { key: string | null; label: string }[] = [
   { key: null,       label: 'Tous' },
   { key: 'ouvert',   label: 'Ouverts' },
   { key: 'en_cours', label: 'En cours' },
@@ -151,8 +151,8 @@ export default function TournoiListScreen({ navigation }: Props) {
 
       {/* Filters */}
       <View style={[styles.filtersArea, { backgroundColor: colors.bgApp }]}>
-        <FilterPills options={SPORTS as any} selected={sportFilter} onSelect={setSportFilter} />
-        <FilterPills options={STATUTS as any} selected={statutFilter} onSelect={setStatutFilter} />
+        <FilterPills options={SPORTS} selected={sportFilter} onSelect={setSportFilter} />
+        <FilterPills options={STATUTS} selected={statutFilter} onSelect={setStatutFilter} />
       </View>
 
       {/* List */}
@@ -174,9 +174,7 @@ export default function TournoiListScreen({ navigation }: Props) {
           renderItem={({ item }) => (
             <TournoiCard
               tournoi={item}
-              onPress={() =>
-                (navigation as any).navigate('TournoiDetail', { tournoiId: item.id })
-              }
+              onPress={() => navigation.navigate('TournoiDetail', { tournoiId: item.id })}
             />
           )}
           refreshControl={
