@@ -4,7 +4,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import {
   View, Text, ScrollView, Modal, FlatList,
   TouchableOpacity, TouchableWithoutFeedback, StatusBar, ActivityIndicator,
-  Animated, KeyboardAvoidingView, Keyboard, Platform,
+  Animated, KeyboardAvoidingView, Keyboard, Platform, StyleSheet,
 } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import LinearGradient from 'react-native-linear-gradient';
@@ -14,13 +14,14 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AdminStackParamList } from '../../types';
 import { createTournoi } from '../../services/tournoiService';
 import { getRegions, getDepartements } from '../../services/matchsService';
-import { sportColors } from '../../theme';
+import { sportColors, type ColorPalette } from '../../theme';
 import { useColors } from '../../hooks/useColors';
 import SectionTitle from '../../components/SectionTitle';
 import FormField from '../../components/FormField';
 import DatePickerButton from '../../components/DatePickerButton';
 import ModalPickerField from '../../components/ModalPickerField';
 import { styles } from './AdminCreateTournoiScreen.styles';
+import { RefreshCw } from 'lucide-react-native';
 
 type Props = NativeStackScreenProps<AdminStackParamList, 'AdminCreateTournoi'>;
 
@@ -65,27 +66,33 @@ export default function AdminCreateTournoiScreen({ navigation }: Props) {
   const [departements, setDepartements] = useState<string[]>([]);
   const [region, setRegion]       = useState('');
   const [dept, setDept]           = useState('');
+  const [regionsError, setRegionsError]         = useState(false);
+  const [departementsError, setDepartementsError] = useState(false);
+  const [regionsReload, setRegionsReload]         = useState(0);
+  const [departementsReload, setDepartementsReload] = useState(0);
 
   useEffect(() => {
     let alive = true;
+    setRegionsError(false);
     getRegions().then(list => {
       if (!alive) return;
       setRegions(list);
       setRegion(prev => prev || list[0] || '');
-    });
+    }).catch(() => { if (alive) setRegionsError(true); });
     return () => { alive = false; };
-  }, []);
+  }, [regionsReload]);
 
   useEffect(() => {
     if (!region) return;
     let alive = true;
+    setDepartementsError(false);
     getDepartements(region).then(list => {
       if (!alive) return;
       setDepartements(list);
       setDept(prev => (list.includes(prev) ? prev : list[0] ?? ''));
-    });
+    }).catch(() => { if (alive) setDepartementsError(true); });
     return () => { alive = false; };
-  }, [region]);
+  }, [region, departementsReload]);
 
   // Step 2 fields
   const [dateDebut, setDateDebut]   = useState<Date | null>(null);
@@ -165,6 +172,8 @@ export default function AdminCreateTournoiScreen({ navigation }: Props) {
         departement:            dept,
       });
       navigation.goBack();
+    } catch {
+      setErrors(prev => ({ ...prev, submit: "Échec de la création du tournoi. Vérifiez votre connexion et réessayez." }));
     } finally {
       setSaving(false);
     }
@@ -260,19 +269,35 @@ export default function AdminCreateTournoiScreen({ navigation }: Props) {
 
               {/* Région */}
               <SectionTitle title="Région" />
-              <ModalPickerField
-                value={region}
-                onPress={() => setModalPicker('region')}
-                colors={colors}
-              />
+              {regionsError ? (
+                <InlineLoadError
+                  message="Impossible de charger les régions"
+                  onRetry={() => setRegionsReload(n => n + 1)}
+                  colors={colors}
+                />
+              ) : (
+                <ModalPickerField
+                  value={region}
+                  onPress={() => setModalPicker('region')}
+                  colors={colors}
+                />
+              )}
 
               {/* Département */}
               <SectionTitle title="Département" />
-              <ModalPickerField
-                value={dept}
-                onPress={() => setModalPicker('dept')}
-                colors={colors}
-              />
+              {departementsError ? (
+                <InlineLoadError
+                  message="Impossible de charger les départements"
+                  onRetry={() => setDepartementsReload(n => n + 1)}
+                  colors={colors}
+                />
+              ) : (
+                <ModalPickerField
+                  value={dept}
+                  onPress={() => setModalPicker('dept')}
+                  colors={colors}
+                />
+              )}
 
               {/* Ville */}
               <SectionTitle title="Ville" />
@@ -416,6 +441,10 @@ export default function AdminCreateTournoiScreen({ navigation }: Props) {
                 </View>
               </View>
 
+              {errors.submit ? (
+                <Text style={inlineErrorStyles.submitError}>{errors.submit}</Text>
+              ) : null}
+
               <TouchableOpacity onPress={handleSave} disabled={saving} style={styles.ctaWrap} activeOpacity={0.85}>
                 <LinearGradient
                   colors={['#6366f1', '#8b5cf6']}
@@ -426,7 +455,7 @@ export default function AdminCreateTournoiScreen({ navigation }: Props) {
                     ? <ActivityIndicator color="#fff" size="small" />
                     : <>
                         <Check size={18} color="#fff" strokeWidth={2.5} />
-                        <Text style={styles.ctaText}>Publier le tournoi</Text>
+                        <Text style={styles.ctaText}>{errors.submit ? 'Réessayer' : 'Publier le tournoi'}</Text>
                       </>
                   }
                 </LinearGradient>
@@ -483,4 +512,50 @@ export default function AdminCreateTournoiScreen({ navigation }: Props) {
     </View>
   );
 }
+
+// ── Inline load-error row — used for the région/département pickers when their
+// backing lists fail to fetch. Deliberately not a full-page ErrorState: this
+// sits mid-form and must not discard whatever the admin has already typed. ──
+function InlineLoadError({
+  message, onRetry, colors,
+}: { message: string; onRetry: () => void; colors: ColorPalette }) {
+  return (
+    <TouchableOpacity
+      style={[inlineErrorStyles.row, { backgroundColor: colors.bgCard, borderColor: colors.borderSubtle }]}
+      onPress={onRetry}
+      activeOpacity={0.7}
+    >
+      <Text style={[inlineErrorStyles.text, { color: colors.textSecondary }]} numberOfLines={1}>
+        {message}
+      </Text>
+      <View style={inlineErrorStyles.retry}>
+        <RefreshCw size={13} color="#6366f1" strokeWidth={2.2} />
+        <Text style={inlineErrorStyles.retryText}>Réessayer</Text>
+      </View>
+    </TouchableOpacity>
+  );
+}
+
+const inlineErrorStyles = StyleSheet.create({
+  row: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+    marginBottom: 16,
+    gap: 10,
+  },
+  text: { fontSize: 13, flex: 1 },
+  retry: { flexDirection: 'row', alignItems: 'center', gap: 5 },
+  retryText: { fontSize: 12, fontWeight: '700', color: '#6366f1' },
+  submitError: {
+    fontSize: 12,
+    color: '#ef4444',
+    marginBottom: 10,
+    textAlign: 'center',
+  },
+});
 

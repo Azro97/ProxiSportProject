@@ -6,7 +6,7 @@
 // Floating sport filter chips are local state — independent of filtresStore.
 
 import React, { useEffect, useState, useMemo, useRef } from 'react';
-import { View, Text, StyleSheet, StatusBar, TouchableOpacity, Platform, FlatList } from 'react-native';
+import { View, Text, StyleSheet, StatusBar, TouchableOpacity, Platform, FlatList, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import MapLibreGL from '@maplibre/maplibre-react-native';
 import { LocateFixed, MapPin as MapPinIcon, WifiOff } from 'lucide-react-native';
@@ -19,6 +19,7 @@ import { useColors } from '../../hooks/useColors';
 import { useThemeStore } from '../../stores/themeStore';
 import TerrainModal from './components/TerrainModal';
 import SportFloatingFilter from './components/SportFloatingFilter';
+import ErrorState from '../../components/ErrorState';
 
 // Only render the map on Android API 28+ — older ARMv7 devices (API 27 = Android 8.1)
 // crash with SIGSEGV in MapLibre's tile-loading worker thread.
@@ -83,6 +84,8 @@ export default function CarteScreen() {
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const { lat, lng, status } = useLocationStore();
   const [terrains, setTerrains] = useState<Terrain[]>([]);
+  const [terrainsLoading, setTerrainsLoading] = useState(true);
+  const [terrainsError, setTerrainsError] = useState(false);
   const [selectedTerrain, setSelectedTerrain] = useState<Terrain | null>(null);
   const [sportFilter, setSportFilter] = useState<string | null>(null);
   const [sportTerrainIds, setSportTerrainIds] = useState<Set<string> | null>(null);
@@ -92,16 +95,24 @@ export default function CarteScreen() {
   const centerLat = lat ?? 48.8566;
   const centerLng = lng ?? 2.3522;
 
-  useEffect(() => {
-    getTerrainsByLocation(centerLat, centerLng, RADIUS_KM).then(setTerrains);
+  const loadTerrains = React.useCallback(() => {
+    setTerrainsError(false);
+    setTerrainsLoading(true);
+    getTerrainsByLocation(centerLat, centerLng, RADIUS_KM)
+      .then(setTerrains)
+      .catch(() => setTerrainsError(true))
+      .finally(() => setTerrainsLoading(false));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [centerLat, centerLng]);
+
+  useEffect(() => { loadTerrains(); }, [loadTerrains]);
 
   useEffect(() => {
     if (!sportFilter) { setSportTerrainIds(null); return; }
     getTerrainIdsForSport(sportFilter).then(ids => {
       setSportTerrainIds(ids);
       setSelectedTerrain(prev => (prev && !ids.has(prev.id) ? null : prev));
-    });
+    }).catch(() => setSportTerrainIds(new Set()));
   }, [sportFilter]);
 
   const visibleTerrains = sportFilter && sportTerrainIds
@@ -139,6 +150,16 @@ export default function CarteScreen() {
           </View>
 
           {/* Terrain list */}
+          {terrainsLoading ? (
+            <ActivityIndicator style={{ marginTop: 32 }} size="large" color={colors.userPosition} />
+          ) : terrainsError ? (
+            <ErrorState
+              title="Impossible de charger les terrains"
+              body="Vérifiez votre connexion internet et réessayez."
+              onRetry={loadTerrains}
+              fullScreen={false}
+            />
+          ) : (
           <FlatList
             data={visibleTerrains}
             keyExtractor={t => t.id}
@@ -168,6 +189,7 @@ export default function CarteScreen() {
               <Text style={[styles.emptyText, { color: colors.textMuted }]}>Aucun terrain trouvé</Text>
             }
           />
+          )}
         </SafeAreaView>
 
         {selectedTerrain && (
@@ -220,7 +242,21 @@ export default function CarteScreen() {
               {status === 'granted' ? 'Position GPS' : 'Paris (défaut)'}
             </Text>
           </View>
+          {terrainsLoading && (
+            <ActivityIndicator style={{ marginLeft: 10 }} size="small" color={colors.userPosition} />
+          )}
         </View>
+
+        {terrainsError && (
+          <View style={styles.terrainsErrorCard}>
+            <ErrorState
+              title="Terrains indisponibles"
+              body="Vérifiez votre connexion internet et réessayez."
+              onRetry={loadTerrains}
+              fullScreen={false}
+            />
+          </View>
+        )}
       </SafeAreaView>
 
       <SportFloatingFilter
@@ -279,6 +315,19 @@ function makeStyles(colors: ColorPalette) {
       fontSize: 15,
       fontWeight: '700',
       color: colors.textPrimary,
+    },
+    terrainsErrorCard: {
+      marginHorizontal: 16,
+      marginTop: 10,
+      borderRadius: 14,
+      backgroundColor: colors.bgCard,
+      borderWidth: 1,
+      borderColor: colors.borderSubtle,
+      elevation: 4,
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.12,
+      shadowRadius: 4,
     },
     fab: {
       position: 'absolute',

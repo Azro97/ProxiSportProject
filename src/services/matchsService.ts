@@ -4,6 +4,7 @@ import { Match } from '../models/Match';
 import { Filtre } from '../models/Filtre';
 import { startOfDay, endOfDay } from '../utils/date';
 import { supabase } from './supabase';
+import { withTimeout } from './withTimeout';
 
 function toMatch(row: any): Match {
   return {
@@ -43,33 +44,33 @@ export async function getMatchs(filtres: Filtre): Promise<Match[]> {
       .lte('date_heure', endOfDay(filtres.date).toISOString());
   }
 
-  const { data, error } = await query;
+  const { data, error } = await withTimeout(query);
   if (error) throw error;
   return (data ?? []).map(toMatch);
 }
 
 export async function getMatchsByTerrain(terrainId: string): Promise<Match[]> {
-  const { data, error } = await supabase
+  const { data, error } = await withTimeout(supabase
     .from('matchs')
     .select('*')
     .eq('terrain_id', terrainId)
-    .order('date_heure', { ascending: true });
+    .order('date_heure', { ascending: true }));
   if (error) throw error;
   return (data ?? []).map(toMatch);
 }
 
 /** Returns the set of terrain IDs that have at least one match for the given sport. */
 export async function getTerrainIdsForSport(sport: string): Promise<Set<string>> {
-  const { data, error } = await supabase
+  const { data, error } = await withTimeout(supabase
     .from('matchs')
     .select('terrain_id')
-    .eq('sport', sport);
+    .eq('sport', sport));
   if (error) throw error;
   return new Set((data ?? []).map((row: any) => row.terrain_id as string));
 }
 
 export async function getMatchById(id: string): Promise<Match | null> {
-  const { data, error } = await supabase.from('matchs').select('*').eq('id', id).maybeSingle();
+  const { data, error } = await withTimeout(supabase.from('matchs').select('*').eq('id', id).maybeSingle());
   if (error) throw error;
   return data ? toMatch(data) : null;
 }
@@ -102,7 +103,7 @@ const _departementsCache: Record<string, string[]> = {};
 
 async function fetchRegionRows(): Promise<RegionRow[]> {
   if (_regionsCache) return _regionsCache;
-  const { data, error } = await supabase.from('regions').select('id, nom').order('nom');
+  const { data, error } = await withTimeout(supabase.from('regions').select('id, nom').order('nom'));
   if (error) throw error;
   _regionsCache = data ?? [];
   return _regionsCache;
@@ -122,11 +123,11 @@ export async function getDepartements(region: string): Promise<string[]> {
   const regionRow = rows.find(r => r.nom === region);
   if (!regionRow) return [];
 
-  const { data, error } = await supabase
+  const { data, error } = await withTimeout(supabase
     .from('departements')
     .select('nom')
     .eq('region_id', regionRow.id)
-    .order('nom');
+    .order('nom'));
   if (error) throw error;
 
   const noms = (data ?? []).map((d: any) => d.nom);
@@ -138,11 +139,11 @@ export async function getDepartements(region: string): Promise<string[]> {
  * All matches (past + upcoming) involving a given team, sorted newest first.
  */
 export async function getMatchsByEquipe(equipeId: string): Promise<Match[]> {
-  const { data, error } = await supabase
+  const { data, error } = await withTimeout(supabase
     .from('matchs')
     .select('*')
     .or(`equipe_a_id.eq.${equipeId},equipe_b_id.eq.${equipeId}`)
-    .order('date_heure', { ascending: false });
+    .order('date_heure', { ascending: false }));
   if (error) throw error;
   return (data ?? []).map(toMatch);
 }
@@ -156,7 +157,7 @@ export async function getMatchsJoues(sport?: string, equipeId?: string): Promise
   let query = supabase.from('matchs').select('*').lt('date_heure', now.toISOString());
   if (sport) query = query.eq('sport', sport);
   if (equipeId) query = query.or(`equipe_a_id.eq.${equipeId},equipe_b_id.eq.${equipeId}`);
-  const { data, error } = await query.order('date_heure', { ascending: false });
+  const { data, error } = await withTimeout(query.order('date_heure', { ascending: false }));
   if (error) throw error;
   return (data ?? []).map(toMatch);
 }

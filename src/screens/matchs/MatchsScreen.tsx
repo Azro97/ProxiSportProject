@@ -28,6 +28,7 @@ import MatchGroupList from './components/MatchGroupList';
 import { sportColors, type ColorPalette } from '../../theme';
 import { useColors } from '../../hooks/useColors';
 import { useThemeStore } from '../../stores/themeStore';
+import ErrorState from '../../components/ErrorState';
 
 type Mode = 'upcoming' | 'results';
 
@@ -46,46 +47,59 @@ export default function MatchsScreen() {
   const [matchs, setMatchs] = useState<Match[]>([]);
   const [terrains, setTerrains] = useState<Record<string, Terrain>>({});
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(false);
   const [results, setResults] = useState<Match[]>([]);
   const [resultsLoading, setResultsLoading] = useState(false);
+  const [resultsError, setResultsError] = useState(false);
 
   const accent = sport ? sportColors[sport] : colors.textPrimary;
+
+  const loadUpcoming = React.useCallback(async () => {
+    if (!sport) { setMatchs([]); setTerrains({}); return; }
+    setLoading(true);
+    try {
+      const data = await getMatchs({ sport, regions, departement: null, divisions, date });
+      setMatchs(data);
+      const uniqueIds = [...new Set(data.map(m => m.terrain_id))];
+      const pairs = await Promise.all(
+        uniqueIds.map(id => getTerrainById(id).then(t => [id, t] as const)),
+      );
+      const map: Record<string, Terrain> = {};
+      pairs.forEach(([id, t]) => { if (t) map[id] = t; });
+      setTerrains(map);
+      setError(false);
+    } catch {
+      setError(true);
+    } finally {
+      setLoading(false);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sport, regions, divisions, date]);
+
+  const loadResults = React.useCallback(() => {
+    setResultsLoading(true);
+    getMatchsJoues(sport ?? undefined)
+      .then(data => { setResults(data); setResultsError(false); })
+      .catch(() => setResultsError(true))
+      .finally(() => setResultsLoading(false));
+  }, [sport]);
 
   // Load upcoming matches (mode === 'upcoming')
   useEffect(() => {
     if (mode !== 'upcoming') return;
     if (!sport) { setMatchs([]); setTerrains({}); return; }
-
-    const timer = setTimeout(async () => {
-      setLoading(true);
-      try {
-        const data = await getMatchs({ sport, regions, departement: null, divisions, date });
-        setMatchs(data);
-        const uniqueIds = [...new Set(data.map(m => m.terrain_id))];
-        const pairs = await Promise.all(
-          uniqueIds.map(id => getTerrainById(id).then(t => [id, t] as const)),
-        );
-        const map: Record<string, Terrain> = {};
-        pairs.forEach(([id, t]) => { if (t) map[id] = t; });
-        setTerrains(map);
-      } finally {
-        setLoading(false);
-      }
-    }, 250);
+    const timer = setTimeout(loadUpcoming, 250);
     return () => clearTimeout(timer);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [mode, sport, regions, divisions, date]);
+  }, [mode, sport, loadUpcoming]);
 
   // Load past results (mode === 'results')
   useEffect(() => {
     if (mode !== 'results') return;
-    setResultsLoading(true);
-    getMatchsJoues(sport ?? undefined)
-      .then(setResults)
-      .finally(() => setResultsLoading(false));
-  }, [mode, sport]);
+    loadResults();
+  }, [mode, loadResults]);
 
   const isLoading = mode === 'upcoming' ? loading : resultsLoading;
+  const hasError = mode === 'upcoming' ? error : resultsError;
   const displayMatchs = mode === 'upcoming' ? matchs : results;
   const count = displayMatchs.length;
 
@@ -139,7 +153,14 @@ export default function MatchsScreen() {
   ), [mode, sport, regions, divisions, date, count, accent, isLoading, styles, isDark, colors, insets]);
 
   const ListEmpty = useMemo(() => !isLoading ? (
-    !sport ? (
+    hasError ? (
+      <ErrorState
+        title={mode === 'results' ? 'Impossible de charger les résultats' : 'Impossible de charger les matchs'}
+        body="Vérifiez votre connexion internet et réessayez."
+        onRetry={mode === 'results' ? loadResults : loadUpcoming}
+        fullScreen={false}
+      />
+    ) : !sport ? (
       <EmptyState
         colors={colors}
         icon={<Search size={22} color={colors.textMuted} strokeWidth={1.8} />}
@@ -157,7 +178,7 @@ export default function MatchsScreen() {
     ) : null
   ) : null,
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  [isLoading, mode, sport, count, colors]);
+  [isLoading, hasError, mode, sport, count, colors, loadResults, loadUpcoming]);
 
   return (
     <View style={styles.root}>

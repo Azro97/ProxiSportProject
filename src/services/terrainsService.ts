@@ -2,6 +2,7 @@
 
 import { Terrain } from '../models/Terrain';
 import { supabase } from './supabase';
+import { withTimeout } from './withTimeout';
 
 function toTerrain(row: any): Terrain {
   return {
@@ -20,21 +21,21 @@ export async function getTerrainsByLocation(
   rayonKm: number,
 ): Promise<Terrain[]> {
   // Indexed radius search via PostGIS — see supabase/policies.sql (nearby_terrains)
-  const { data, error } = await supabase.rpc('nearby_terrains', {
+  const { data, error } = await withTimeout(supabase.rpc('nearby_terrains', {
     in_lat: lat,
     in_lng: lng,
     in_radius_km: rayonKm,
-  });
+  }));
   if (error) throw error;
   return (data ?? []).map(toTerrain);
 }
 
 export async function getTerrainById(id: string): Promise<Terrain | null> {
-  const { data, error } = await supabase
+  const { data, error } = await withTimeout(supabase
     .from('terrains')
     .select('id, nom, adresse, ville, lat, lng')
     .eq('id', id)
-    .maybeSingle();
+    .maybeSingle());
   if (error) throw error;
   return data ? toTerrain(data) : null;
 }

@@ -21,6 +21,7 @@ import { useColors } from '../../hooks/useColors';
 import { getAllEquipes } from '../../services/equipesService';
 import { Equipe } from '../../models/Equipe';
 import { RootStackParamList } from '../../types';
+import ErrorState from '../../components/ErrorState';
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
 
@@ -45,15 +46,20 @@ export default function ClassementsScreen() {
   const [sportFilter, setSportFilter] = useState<string | null>(null);
   const [allTeams, setAllTeams] = useState<Equipe[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
   const [focused, setFocused] = useState(false);
   const inputRef = useRef<TextInput>(null);
 
-  useEffect(() => {
+  const load = useCallback(() => {
+    setLoading(true);
+    setError(false);
     getAllEquipes()
       .then(teams => setAllTeams(teams.sort((a, b) => a.nom.localeCompare(b.nom, 'fr'))))
-      .catch(() => setAllTeams([]))
+      .catch(() => { setAllTeams([]); setError(true); })
       .finally(() => setLoading(false));
   }, []);
+
+  useEffect(() => { load(); }, [load]);
 
   const displayed = useMemo(() => {
     let list = sportFilter ? allTeams.filter(e => e.sport === sportFilter) : allTeams;
@@ -113,7 +119,7 @@ export default function ClassementsScreen() {
       <View style={styles.header}>
         <View>
           <Text style={[styles.title, { color: colors.textPrimary }]}>Équipes</Text>
-          {!loading && (
+          {!loading && !error && (
             <Text style={[styles.subtitle, { color: colors.textMuted }]}>
               {displayed.length} / {allTeams.length} équipes
             </Text>
@@ -193,6 +199,12 @@ export default function ClassementsScreen() {
         <View style={styles.center}>
           <ActivityIndicator size="large" color={colors.textMuted} />
         </View>
+      ) : error ? (
+        <ErrorState
+          title="Impossible de charger les équipes"
+          body="Vérifiez votre connexion internet et réessayez."
+          onRetry={load}
+        />
       ) : displayed.length === 0 ? (
         <View style={styles.center}>
           <Text style={[styles.emptyText, { color: colors.textMuted }]}>Aucune équipe trouvée</Text>

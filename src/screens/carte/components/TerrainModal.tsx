@@ -22,6 +22,7 @@ import { RootStackParamList } from '../../../types';
 import { getMatchsByTerrain } from '../../../services/matchsService';
 import { sportColors, type ColorPalette } from '../../../theme';
 import { useColors } from '../../../hooks/useColors';
+import ErrorState from '../../../components/ErrorState';
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
 
@@ -36,13 +37,18 @@ export default function TerrainModal({ terrain, onClose }: Props) {
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const [matchs, setMatchs] = useState<Match[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
 
-  useEffect(() => {
+  const load = React.useCallback(() => {
     setLoading(true);
+    setError(false);
     getMatchsByTerrain(terrain.id)
       .then(setMatchs)
+      .catch(() => setError(true))
       .finally(() => setLoading(false));
   }, [terrain.id]);
+
+  useEffect(() => { load(); }, [load]);
 
   return (
     <Modal visible animationType="slide" transparent onRequestClose={onClose}>
@@ -91,6 +97,13 @@ export default function TerrainModal({ terrain, onClose }: Props) {
           {/* Match list */}
           {loading ? (
             <ActivityIndicator style={styles.loader} color={colors.textMuted} />
+          ) : error ? (
+            <ErrorState
+              title="Impossible de charger les matchs"
+              body="Vérifiez votre connexion internet et réessayez."
+              onRetry={load}
+              fullScreen={false}
+            />
           ) : matchs.length === 0 ? (
             <Text style={styles.empty}>Aucun match à venir sur ce terrain</Text>
           ) : (

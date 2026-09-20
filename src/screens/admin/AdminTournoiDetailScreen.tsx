@@ -23,6 +23,7 @@ import TournoiStatCard from './components/TournoiStatCard';
 import TimelineRow from './components/TimelineRow';
 import TeamCard from './components/TeamCard';
 import { styles } from './AdminTournoiDetailScreen.styles';
+import ErrorState from '../../components/ErrorState';
 
 type Props = NativeStackScreenProps<AdminStackParamList, 'AdminTournoiDetail'>;
 
@@ -54,11 +55,13 @@ export default function AdminTournoiDetailScreen({ navigation, route }: Props) {
   const [tournoi, setTournoi]           = useState<Tournoi | null>(null);
   const [inscriptions, setInscriptions] = useState<Inscription[]>([]);
   const [loading, setLoading]           = useState(true);
+  const [error, setError]               = useState(false);
   const [expandedId, setExpandedId]     = useState<string | null>(null);
   const scrollY = React.useRef(new Animated.Value(0)).current;
 
   const load = useCallback(async () => {
     setLoading(true);
+    setError(false);
     try {
       const [t, ins] = await Promise.all([
         getTournoiById(tournoiId),
@@ -66,6 +69,8 @@ export default function AdminTournoiDetailScreen({ navigation, route }: Props) {
       ]);
       setTournoi(t);
       setInscriptions(ins);
+    } catch {
+      setError(true);
     } finally {
       setLoading(false);
     }
@@ -73,10 +78,22 @@ export default function AdminTournoiDetailScreen({ navigation, route }: Props) {
 
   useEffect(() => { load(); }, [load]);
 
-  if (loading || !tournoi) {
+  if (loading) {
     return (
       <View style={[styles.root, { backgroundColor: colors.bgApp }]}>
         <ActivityIndicator size="large" color="#6366f1" style={styles.loader} />
+      </View>
+    );
+  }
+
+  if (error || !tournoi) {
+    return (
+      <View style={[styles.root, { backgroundColor: colors.bgApp }]}>
+        <ErrorState
+          title={error ? 'Impossible de charger le tournoi' : 'Tournoi introuvable'}
+          body={error ? 'Vérifiez votre connexion internet et réessayez.' : "Ce tournoi n'existe pas ou a été supprimé."}
+          onRetry={error ? load : undefined}
+        />
       </View>
     );
   }

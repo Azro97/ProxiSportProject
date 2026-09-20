@@ -20,6 +20,7 @@ import { getEquipeById } from '../../services/equipesService';
 import { getMatchsByEquipe } from '../../services/matchsService';
 import { sportColors, sportColorsSoft, type ColorPalette } from '../../theme';
 import { useColors } from '../../hooks/useColors';
+import ErrorState from '../../components/ErrorState';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'TeamDetail'>;
 
@@ -51,15 +52,23 @@ export default function TeamDetailScreen({ route, navigation }: Props) {
 
   const [equipe, setEquipe] = useState<Equipe | null | undefined>(undefined);
   const [matches, setMatches] = useState<Match[] | undefined>(undefined);
+  const [error, setError] = useState(false);
 
-  useEffect(() => {
-    getEquipeById(equipeId).then(e => {
-      setEquipe(e);
-      if (e) {
-        getMatchsByEquipe(equipeId).then(setMatches);
-      }
-    });
+  const load = React.useCallback(() => {
+    setError(false);
+    setEquipe(undefined);
+    setMatches(undefined);
+    getEquipeById(equipeId)
+      .then(e => {
+        setEquipe(e);
+        if (e) {
+          getMatchsByEquipe(equipeId).then(setMatches).catch(() => setError(true));
+        }
+      })
+      .catch(() => setError(true));
   }, [equipeId]);
+
+  useEffect(() => { load(); }, [load]);
 
   const now = new Date();
   const sections = useMemo(() => {
@@ -75,10 +84,22 @@ export default function TeamDetailScreen({ route, navigation }: Props) {
   const sportColor = equipe ? (sportColors[equipe.sport] ?? '#6b7280') : '#6b7280';
   const sportColorSoft = equipe ? (sportColorsSoft[equipe.sport] ?? 'rgba(107,114,128,0.12)') : 'rgba(107,114,128,0.12)';
 
-  if (equipe === undefined) {
+  if (equipe === undefined && !error) {
     return (
       <View style={[styles.center, { paddingTop: insets.top }]}>
         <ActivityIndicator color={colors.textMuted} />
+      </View>
+    );
+  }
+
+  if (error) {
+    return (
+      <View style={[styles.center, { paddingTop: insets.top }]}>
+        <ErrorState
+          title="Impossible de charger l'équipe"
+          body="Vérifiez votre connexion internet et réessayez."
+          onRetry={load}
+        />
       </View>
     );
   }

@@ -21,6 +21,7 @@ import { getTerrainById } from '../../services/terrainsService';
 import { sportColors, sportColorsSoft, radii, type ColorPalette } from '../../theme';
 import { useColors } from '../../hooks/useColors';
 import { useThemeStore } from '../../stores/themeStore';
+import ErrorState from '../../components/ErrorState';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'MatchDetail'>;
 
@@ -39,19 +40,39 @@ export default function MatchDetailScreen({ route, navigation }: Props) {
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const [match, setMatch] = useState<Match | null | undefined>(undefined);
   const [terrain, setTerrain] = useState<Terrain | null>(null);
+  const [error, setError] = useState(false);
 
-  useEffect(() => {
-    getMatchById(matchId).then(m => {
-      setMatch(m);
-      if (m) getTerrainById(m.terrain_id).then(setTerrain);
-    });
+  const load = React.useCallback(() => {
+    setError(false);
+    setMatch(undefined);
+    getMatchById(matchId)
+      .then(m => {
+        setMatch(m);
+        if (m) getTerrainById(m.terrain_id).then(setTerrain).catch(() => {});
+      })
+      .catch(() => setError(true));
   }, [matchId]);
 
-  if (match === undefined) {
+  useEffect(() => { load(); }, [load]);
+
+  if (match === undefined && !error) {
     return (
       <View style={[styles.container, styles.center]}>
         <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} />
         <ActivityIndicator color={colors.textMuted} size="large" />
+      </View>
+    );
+  }
+
+  if (error) {
+    return (
+      <View style={[styles.container, styles.center]}>
+        <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} />
+        <ErrorState
+          title="Impossible de charger le match"
+          body="Vérifiez votre connexion internet et réessayez."
+          onRetry={load}
+        />
       </View>
     );
   }
