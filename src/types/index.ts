@@ -10,12 +10,17 @@ export type RootStackParamList = {
   RechercheEquipes: undefined;
   AdminLogin: undefined;
   AdminMain: undefined;
+  Login: { redirectToMesInscriptions?: boolean } | undefined;
+  SignUp: { redirectToMesInscriptions?: boolean } | undefined;
+  ForgotPassword: undefined;
+  MesInscriptions: undefined;
 };
 
 export type AdminStackParamList = {
   AdminDashboard: undefined;
   AdminTournoiDetail: { tournoiId: string };
   AdminCreateTournoi: undefined;
+  AdminCreateEquipe: undefined;
 };
 
 export type BottomTabParamList = {

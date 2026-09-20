@@ -3,8 +3,11 @@
 import React, { useEffect, useState } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { StripeProvider } from '@stripe/stripe-react-native';
+import { STRIPE_PUBLISHABLE_KEY } from '@env';
 import RootNavigator from './src/navigation/RootNavigator';
 import LocationProvider from './src/providers/LocationProvider';
+import AuthProvider from './src/providers/AuthProvider';
 import GpsIntroScreen from './src/screens/onboarding/GpsIntroScreen';
 
 export default function App() {
@@ -30,9 +33,13 @@ export default function App() {
 
   return (
     <SafeAreaProvider>
-      <LocationProvider>
-        <RootNavigator />
-      </LocationProvider>
+      <StripeProvider publishableKey={STRIPE_PUBLISHABLE_KEY}>
+        <AuthProvider>
+          <LocationProvider>
+            <RootNavigator />
+          </LocationProvider>
+        </AuthProvider>
+      </StripeProvider>
     </SafeAreaProvider>
   );
 }

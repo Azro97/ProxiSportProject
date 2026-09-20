@@ -11,6 +11,10 @@ import MatchDetailScreen from '../screens/matchDetail/MatchDetailScreen';
 import TeamDetailScreen from '../screens/classements/TeamDetailScreen';
 import TournoiDetailScreen from '../screens/tournois/TournoiDetailScreen';
 import ClassementsScreen from '../screens/classements/ClassementsScreen';
+import LoginScreen from '../screens/auth/LoginScreen';
+import SignUpScreen from '../screens/auth/SignUpScreen';
+import ForgotPasswordScreen from '../screens/auth/ForgotPasswordScreen';
+import MesInscriptionsScreen from '../screens/auth/MesInscriptionsScreen';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
@@ -25,6 +29,10 @@ export default function RootNavigator() {
         <Stack.Screen name="RechercheEquipes"  component={ClassementsScreen}    options={{ headerShown: false }} />
         <Stack.Screen name="AdminLogin"        component={AdminLoginScreen}     options={{ headerShown: false, animation: 'slide_from_bottom' }} />
         <Stack.Screen name="AdminMain"         component={AdminNavigator}       options={{ headerShown: false, animation: 'slide_from_right' }} />
+        <Stack.Screen name="Login"             component={LoginScreen}          options={{ headerShown: false, animation: 'slide_from_bottom' }} />
+        <Stack.Screen name="SignUp"            component={SignUpScreen}         options={{ headerShown: false, animation: 'slide_from_bottom' }} />
+        <Stack.Screen name="ForgotPassword"    component={ForgotPasswordScreen} options={{ headerShown: false, animation: 'slide_from_bottom' }} />
+        <Stack.Screen name="MesInscriptions"   component={MesInscriptionsScreen} options={{ headerShown: false, animation: 'slide_from_right' }} />
       </Stack.Navigator>
     </NavigationContainer>
   );

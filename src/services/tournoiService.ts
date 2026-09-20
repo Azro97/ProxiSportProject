@@ -3,6 +3,7 @@
 import { Tournoi } from '../models/Tournoi';
 import { Inscription } from '../models/Inscription';
 import { supabase } from './supabase';
+import { withTimeout } from './withTimeout';
 
 function toTournoi(row: any): Tournoi {
   return {
@@ -49,32 +50,55 @@ export async function getTournois(sport?: string | null, region?: string | null)
   let query = supabase.from('tournois').select('*');
   if (sport)  query = query.eq('sport', sport);
   if (region) query = query.eq('region', region);
-  const { data, error } = await query.order('date_debut', { ascending: true });
+  const { data, error } = await withTimeout(query.order('date_debut', { ascending: true }));
   if (error) throw error;
   return (data ?? []).map(toTournoi);
 }
 
 export async function getTournoiById(id: string): Promise<Tournoi | null> {
-  const { data, error } = await supabase.from('tournois').select('*').eq('id', id).maybeSingle();
+  const { data, error } = await withTimeout(supabase.from('tournois').select('*').eq('id', id).maybeSingle());
   if (error) throw error;
   return data ? toTournoi(data) : null;
 }
 
 /** Get all inscriptions for a given tournament */
 export async function getInscriptionsByTournoi(tournoiId: string): Promise<Inscription[]> {
-  const { data, error } = await supabase
+  const { data, error } = await withTimeout(supabase
     .from('inscriptions')
     .select('*')
     .eq('tournoi_id', tournoiId)
-    .order('date_inscription', { ascending: false });
+    .order('date_inscription', { ascending: false }));
   if (error) throw error;
   return (data ?? []).map(toInscription);
+}
+
+/** All inscriptions belonging to a signed-in user, most recent first — for "Mes inscriptions". */
+export async function getMyInscriptions(uid: string): Promise<Inscription[]> {
+  const { data, error } = await withTimeout(supabase
+    .from('inscriptions')
+    .select('*')
+    .eq('capitaine_uid', uid)
+    .order('date_inscription', { ascending: false }));
+  if (error) throw error;
+  return (data ?? []).map(toInscription);
+}
+
+/**
+ * Cancel a signed-in user's own registration (RPC-gated — see
+ * supabase/policies.sql). Guests can't call this: the RPC checks
+ * capitaine_uid = auth.uid(), which is never true for a guest row.
+ */
+export async function cancelInscription(inscriptionId: string): Promise<void> {
+  const { error } = await withTimeout(supabase.rpc('cancel_inscription', {
+    p_inscription_id: inscriptionId,
+  }));
+  if (error) throw error;
 }
 
 /** Add a new tournament */
 export async function createTournoi(data: Omit<Tournoi, 'id' | 'equipesInscrites'>): Promise<string> {
   const id = 'to_' + Date.now();
-  const { error } = await supabase.from('tournois').insert({
+  const { error } = await withTimeout(supabase.from('tournois').insert({
     id,
     nom: data.nom,
     sport: data.sport,
@@ -95,7 +119,7 @@ export async function createTournoi(data: Omit<Tournoi, 'id' | 'equipesInscrites
     statut: data.statut,
     region: data.region,
     departement: data.departement,
-  });
+  }));
   if (error) throw error;
   return id;
 }
@@ -111,7 +135,13 @@ export function formatPrix(centimes: number): string {
   });
 }
 
-/** Register a team to a tournament (atomic RPC — see supabase/policies.sql) */
+/**
+ * Register a team to a tournament (atomic RPC — see supabase/policies.sql).
+ * capitaine_uid is NOT a parameter here on purpose: the RPC derives it
+ * server-side from auth.uid() (null for guests, the real uid when a session
+ * is active) — a client-supplied uid would let anyone forge someone else's
+ * registration, so it must never be accepted as input.
+ */
 export async function createInscription(data: {
   tournoi_id: string;
   equipe_nom: string;
@@ -121,13 +151,25 @@ export async function createInscription(data: {
 }): Promise<string> {
   // create_inscription() inserts the row AND increments tournois.equipes_inscrites
   // atomically in one transaction — see supabase/policies.sql.
-  const { data: id, error } = await supabase.rpc('create_inscription', {
+  const { data: id, error } = await withTimeout(supabase.rpc('create_inscription', {
     p_tournoi_id: data.tournoi_id,
     p_equipe_nom: data.equipe_nom,
     p_capitaine_email: data.capitaine_email,
     p_membres: data.membres,
     p_montant_paye: data.montant_payé,
-  });
+  }));
   if (error) throw error;
+
+  // Best-effort — the registration write above is already durable; a failed
+  // confirmation email must never turn a successful registration into an
+  // 'error' step in InscriptionModal.
+  try {
+    await supabase.functions.invoke('send-inscription-confirmation', {
+      body: { inscriptionId: id },
+    });
+  } catch (emailError) {
+    console.warn('[tournoiService] confirmation email failed to send', emailError);
+  }
+
   return id as string;
 }

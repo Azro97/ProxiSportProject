@@ -12,6 +12,7 @@ import {
   Trophy, ChevronRight, Info,
 } from 'lucide-react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
+import { useFocusEffect } from '@react-navigation/native';
 import { RootStackParamList } from '../../types';
 import { Tournoi } from '../../models/Tournoi';
 import { getTournoiById, formatPrix } from '../../services/tournoiService';
@@ -20,6 +21,7 @@ import { infoStyles, styles } from './TournoiDetailScreen.styles';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { sportColors, sportColorsSoft } from '../../theme';
 import InscriptionModal from './components/InscriptionModal';
+import ErrorState from '../../components/ErrorState';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'TournoiDetail'>;
 
@@ -49,18 +51,52 @@ export default function TournoiDetailScreen({ route, navigation }: Props) {
 
   const [tournoi, setTournoi] = useState<Tournoi | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
+  const [reopenModalOnFocus, setReopenModalOnFocus] = useState(false);
 
-  useEffect(() => {
+  // Reopens the InscriptionModal after the user detours to Login/SignUp from
+  // the modal's 'choice' step, so they land back on the 'form' step instead
+  // of having to re-tap "S'inscrire".
+  useFocusEffect(
+    React.useCallback(() => {
+      if (reopenModalOnFocus) {
+        setReopenModalOnFocus(false);
+        setModalVisible(true);
+      }
+    }, [reopenModalOnFocus]),
+  );
+
+  const load = React.useCallback(() => {
+    setLoading(true);
+    setError(false);
     getTournoiById(tournoiId)
       .then(setTournoi)
+      .catch(() => setError(true))
       .finally(() => setLoading(false));
   }, [tournoiId]);
+
+  useEffect(() => { load(); }, [load]);
 
   if (loading) {
     return (
       <View style={[styles.center, { backgroundColor: colors.bgApp }]}>
         <ActivityIndicator size="large" color={colors.userPosition} />
+      </View>
+    );
+  }
+
+  if (error) {
+    return (
+      <View style={[styles.center, { backgroundColor: colors.bgApp }]}>
+        <ErrorState
+          title="Impossible de charger le tournoi"
+          body="Vérifiez votre connexion internet et réessayez."
+          onRetry={load}
+        />
+        <TouchableOpacity onPress={() => navigation.goBack()}>
+          <Text style={{ color: colors.userPosition, marginTop: 4, fontWeight: '600' }}>Retour</Text>
+        </TouchableOpacity>
       </View>
     );
   }
@@ -255,6 +291,7 @@ export default function TournoiDetailScreen({ route, navigation }: Props) {
         visible={modalVisible}
         tournoi={tournoi}
         onClose={() => setModalVisible(false)}
+        onRequestAuth={() => { setModalVisible(false); setReopenModalOnFocus(true); }}
       />
     </View>
   );

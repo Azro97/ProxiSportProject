@@ -6,7 +6,7 @@ import {
   ActivityIndicator, TouchableOpacity, StatusBar,
   RefreshControl, ScrollView,
 } from 'react-native';
-import { Trophy, Shield } from 'lucide-react-native';
+import { Trophy, Shield, UserRound } from 'lucide-react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { BottomTabScreenProps } from '@react-navigation/bottom-tabs';
 import { CompositeScreenProps } from '@react-navigation/native';
@@ -14,9 +14,11 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { RootStackParamList, BottomTabParamList } from '../../types';
 import { Tournoi } from '../../models/Tournoi';
 import { getTournois } from '../../services/tournoiService';
+import { useAuthStore } from '../../stores/authStore';
 import { useColors } from '../../hooks/useColors';
 import { styles } from './TournoiListScreen.styles';
 import TournoiCard from './components/TournoiCard';
+import ErrorState from '../../components/ErrorState';
 
 type Props = CompositeScreenProps<
   BottomTabScreenProps<BottomTabParamList, 'Tournois'>,
@@ -42,10 +44,12 @@ const STATUTS = [
 export default function TournoiListScreen({ navigation }: Props) {
   const colors = useColors();
   const insets = useSafeAreaInsets();
+  const user = useAuthStore(s => s.user);
 
   const [allTournois, setAllTournois]   = useState<Tournoi[]>([]);
   const [loading, setLoading]           = useState(true);
   const [refreshing, setRefreshing]     = useState(false);
+  const [error, setError]               = useState(false);
   const [sportFilter, setSportFilter]   = useState<string | null>(null);
   const [statutFilter, setStatutFilter] = useState<string | null>(null);
 
@@ -55,6 +59,9 @@ export default function TournoiListScreen({ navigation }: Props) {
     try {
       const data = await getTournois();
       setAllTournois(data);
+      setError(false);
+    } catch {
+      setError(true);
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -117,11 +124,21 @@ export default function TournoiListScreen({ navigation }: Props) {
           <Text style={[styles.headerText, { color: colors.textPrimary }]}>Tournois</Text>
         </View>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-          {!loading && (
+          {!loading && !error && (
             <Text style={[styles.countText, { color: colors.textSecondary }]}>
               {displayed.length} tournoi{displayed.length !== 1 ? 's' : ''}
             </Text>
           )}
+          <TouchableOpacity
+            onPress={() => user
+              ? navigation.navigate('MesInscriptions')
+              : navigation.navigate('Login', { redirectToMesInscriptions: true })
+            }
+            style={[styles.adminBtn, { backgroundColor: colors.bgApp, borderColor: colors.borderSubtle }]}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          >
+            <UserRound size={15} color={colors.textTertiary} strokeWidth={2} />
+          </TouchableOpacity>
           <TouchableOpacity
             onPress={() => navigation.navigate('AdminLogin')}
             style={[styles.adminBtn, { backgroundColor: colors.bgApp, borderColor: colors.borderSubtle }]}
@@ -143,6 +160,12 @@ export default function TournoiListScreen({ navigation }: Props) {
         <View style={styles.loader}>
           <ActivityIndicator size="large" color={colors.userPosition} />
         </View>
+      ) : error ? (
+        <ErrorState
+          title="Impossible de charger les tournois"
+          body="Vérifiez votre connexion internet et réessayez."
+          onRetry={() => load()}
+        />
       ) : (
         <FlatList
           data={displayed}

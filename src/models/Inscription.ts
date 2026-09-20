@@ -5,7 +5,7 @@ export interface Inscription {
   tournoi_id: string;
   equipe_id: string;
   equipe_nom: string;
-  capitaine_uid: string;
+  capitaine_uid: string | null;   // null = guest registration, no account
   capitaine_email: string;
   membres: string[];
   dateInscription: Date;
