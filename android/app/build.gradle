@@ -16,6 +16,9 @@ react {
     /* Variants */
     //   By default debug variants skip bundling. Setting to empty list means ALL variants bundle JS.
     debuggableVariants = []
+
+    /* Autolinking */
+    autolinkLibrariesWithApp()
 }
 
 /**
@@ -83,6 +86,3 @@ dependencies {
     implementation("com.facebook.react:react-android")
     implementation("com.facebook.react:hermes-android")
 }
-
-apply from: file("../../node_modules/@react-native-community/cli-platform-android/native_modules.gradle")
-try { applyNativeModulesAppBuildGradle(project) } catch (ignored) {}
