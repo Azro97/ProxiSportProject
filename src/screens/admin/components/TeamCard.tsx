@@ -4,6 +4,7 @@ import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { ChevronDown, ChevronUp } from 'lucide-react-native';
 import { Inscription, InscriptionStatut } from '../../../models/Inscription';
 import { formatPrix } from '../../../services/tournoiService';
+import { type ColorPalette } from '../../../theme';
 
 const STATUT_INSCR: Record<InscriptionStatut, { label: string; color: string }> = {
   confirmée:           { label: 'Confirmée',  color: '#16a34a' },
@@ -17,7 +18,7 @@ interface Props {
   expanded: boolean;
   onToggle: () => void;
   accent: string;
-  colors: any;
+  colors: ColorPalette;
 }
 
 export default function TeamCard({ inscription, index, expanded, onToggle, accent, colors }: Props) {

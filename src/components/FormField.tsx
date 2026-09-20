@@ -1,13 +1,14 @@
 // src/components/FormField.tsx
 import React from 'react';
 import { View, Text, TextInput, StyleSheet } from 'react-native';
+import { type ColorPalette } from '../theme';
 
 interface Props {
   value: string;
   onChangeText: (v: string) => void;
   placeholder: string;
   error?: string;
-  colors: any;
+  colors: ColorPalette;
   multiline?: boolean;
   numberOfLines?: number;
   style?: any;

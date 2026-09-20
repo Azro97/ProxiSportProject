@@ -1,13 +1,14 @@
 // src/screens/admin/components/TimelineRow.tsx
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
+import { type ColorPalette } from '../../../theme';
 
 interface Props {
   label: string;
   date: string;
   badge?: string;
   badgeColor?: string;
-  colors: any;
+  colors: ColorPalette;
   isFirst?: boolean;
   isLast?: boolean;
 }

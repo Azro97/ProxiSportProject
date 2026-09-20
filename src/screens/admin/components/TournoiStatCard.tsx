@@ -1,13 +1,14 @@
 // src/screens/admin/components/TournoiStatCard.tsx
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
+import { type ColorPalette } from '../../../theme';
 
 interface Props {
   icon: React.ReactNode;
   value: string;
   label: string;
   accent: string;
-  colors: any;
+  colors: ColorPalette;
 }
 
 export default function TournoiStatCard({ icon, value, label, accent, colors }: Props) {

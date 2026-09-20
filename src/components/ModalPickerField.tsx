@@ -2,11 +2,12 @@
 import React from 'react';
 import { Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { ChevronRight } from 'lucide-react-native';
+import { type ColorPalette } from '../theme';
 
 interface Props {
   value: string;
   onPress: () => void;
-  colors: any;
+  colors: ColorPalette;
 }
 
 export default function ModalPickerField({ value, onPress, colors }: Props) {

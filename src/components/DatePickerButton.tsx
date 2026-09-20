@@ -3,12 +3,13 @@ import React from 'react';
 import { Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { Calendar } from 'lucide-react-native';
 import { formatDate } from '../utils/date';
+import { type ColorPalette } from '../theme';
 
 interface Props {
   date: Date | null;
   onPress: () => void;
   error?: string;
-  colors: any;
+  colors: ColorPalette;
   accent: string;
 }
 
