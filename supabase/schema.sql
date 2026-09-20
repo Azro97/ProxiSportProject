@@ -91,7 +91,11 @@ create table tournois (
   taille_equipe            integer not null,
   statut                   text not null,
   region                   text not null,
-  departement              text not null
+  departement              text not null,
+  -- Defense-in-depth backstop — real oversell prevention happens via
+  -- row-locking in create_pending_inscription_paiement()/create_inscription()
+  -- at reservation time, not here. See policies.sql.
+  constraint tournois_equipes_inscrites_check check (equipes_inscrites >= 0 and equipes_inscrites <= max_equipes)
 );
 create index tournois_sport_idx  on tournois (sport);
 create index tournois_region_idx on tournois (region);
@@ -103,12 +107,21 @@ create table inscriptions (
   tournoi_id               text not null references tournois(id),
   equipe_id                text not null,
   equipe_nom               text not null,
-  capitaine_uid            text not null default 'user_mock',
+  -- null = guest registration (no account). Set for signed-in users by the
+  -- create_inscription() RPC, which derives it from auth.uid() — never
+  -- accepted as a client-supplied value. See policies.sql.
+  capitaine_uid            uuid references auth.users(id) on delete set null,
   capitaine_email          text not null,
   membres                  text[] not null,
   date_inscription         timestamptz not null default now(),
   statut                   text not null,
   stripe_payment_intent_id text,
-  montant_paye             integer
+  montant_paye             integer,
+  constraint inscriptions_statut_check check (statut in ('en_attente_paiement', 'confirmée', 'annulée'))
 );
 create index inscriptions_tournoi_idx on inscriptions (tournoi_id);
+create index inscriptions_capitaine_uid_idx on inscriptions (capitaine_uid);
+-- Partial: free-tournoi rows leave stripe_payment_intent_id null forever.
+create unique index inscriptions_stripe_payment_intent_id_uidx
+  on inscriptions (stripe_payment_intent_id)
+  where stripe_payment_intent_id is not null;
