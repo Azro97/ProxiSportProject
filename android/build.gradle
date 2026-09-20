@@ -4,18 +4,23 @@ buildscript {
     ext {
         buildToolsVersion = "37.0.0"
         minSdkVersion = 24
-        compileSdkVersion = 35
+        compileSdkVersion = 36
         targetSdkVersion = 35
         ndkVersion = "30.0.14904198"
-        kotlinVersion = "1.9.24"
+        // RN 0.81.6 itself recommends Kotlin 2.1.20, but Stripe's Android SDK needs 2.2.21
+        // (a compiler that can only read 2.1-format metadata can't read 2.2-format metadata).
+        // RN 0.81's own Gradle plugin is already built against Kotlin 2.1+'s interface-based
+        // KotlinTopLevelExtension, so going further to 2.2.21 doesn't reintroduce the
+        // class-vs-interface break that blocked this on RN 0.77.2.
+        kotlinVersion = "2.2.21"
     }
     repositories {
         google()
         mavenCentral()
     }
     dependencies {
-        classpath("com.android.tools.build:gradle:8.6.0")
-        classpath("com.facebook.react:react-native-gradle-plugin:0.76.9")
+        classpath("com.android.tools.build:gradle:8.10.1")
+        classpath("com.facebook.react:react-native-gradle-plugin:0.81.6")
         classpath("org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlinVersion")
     }
 }
