@@ -23,6 +23,7 @@ import { useColors } from '../../hooks/useColors';
 import SectionTitle from '../../components/SectionTitle';
 import FormField from '../../components/FormField';
 import ModalPickerField from '../../components/ModalPickerField';
+import InlineLoadError from '../../components/InlineLoadError';
 import { styles } from './AdminCreateTournoiScreen.styles';
 
 type Props = NativeStackScreenProps<AdminStackParamList, 'AdminCreateEquipe'>;
@@ -46,6 +47,8 @@ export default function AdminCreateEquipeScreen({ navigation }: Props) {
   const [dept, setDept]     = useState('');
   const [regionsError, setRegionsError]         = useState(false);
   const [departementsError, setDepartementsError] = useState(false);
+  const [regionsReload, setRegionsReload]         = useState(0);
+  const [departementsReload, setDepartementsReload] = useState(0);
 
   const [modalPicker, setModalPicker] = useState<'region' | 'dept' | null>(null);
   const [saving, setSaving] = useState(false);
@@ -55,24 +58,26 @@ export default function AdminCreateEquipeScreen({ navigation }: Props) {
 
   useEffect(() => {
     let alive = true;
+    setRegionsError(false);
     getRegions().then(list => {
       if (!alive) return;
       setRegions(list);
       setRegion(prev => prev || list[0] || '');
     }).catch(() => { if (alive) setRegionsError(true); });
     return () => { alive = false; };
-  }, []);
+  }, [regionsReload]);
 
   useEffect(() => {
     if (!region) return;
     let alive = true;
+    setDepartementsError(false);
     getDepartements(region).then(list => {
       if (!alive) return;
       setDepartements(list);
       setDept(prev => (list.includes(prev) ? prev : list[0] ?? ''));
     }).catch(() => { if (alive) setDepartementsError(true); });
     return () => { alive = false; };
-  }, [region]);
+  }, [region, departementsReload]);
 
   async function handleSave() {
     const errs: Record<string, string> = {};
@@ -149,18 +154,22 @@ export default function AdminCreateEquipeScreen({ navigation }: Props) {
 
               <SectionTitle title="Région" />
               {regionsError ? (
-                <Text style={{ color: '#ef4444', fontSize: 13, marginBottom: 16 }}>
-                  Impossible de charger les régions.
-                </Text>
+                <InlineLoadError
+                  message="Impossible de charger les régions"
+                  onRetry={() => setRegionsReload(n => n + 1)}
+                  colors={colors}
+                />
               ) : (
                 <ModalPickerField value={region} onPress={() => setModalPicker('region')} colors={colors} />
               )}
 
               <SectionTitle title="Département" />
               {departementsError ? (
-                <Text style={{ color: '#ef4444', fontSize: 13, marginBottom: 16 }}>
-                  Impossible de charger les départements.
-                </Text>
+                <InlineLoadError
+                  message="Impossible de charger les départements"
+                  onRetry={() => setDepartementsReload(n => n + 1)}
+                  colors={colors}
+                />
               ) : (
                 <ModalPickerField value={dept} onPress={() => setModalPicker('dept')} colors={colors} />
               )}

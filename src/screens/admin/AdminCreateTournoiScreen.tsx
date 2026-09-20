@@ -14,14 +14,14 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AdminStackParamList } from '../../types';
 import { createTournoi } from '../../services/tournoiService';
 import { getRegions, getDepartements } from '../../services/matchsService';
-import { sportColors, type ColorPalette } from '../../theme';
+import { sportColors } from '../../theme';
 import { useColors } from '../../hooks/useColors';
 import SectionTitle from '../../components/SectionTitle';
 import FormField from '../../components/FormField';
 import DatePickerButton from '../../components/DatePickerButton';
 import ModalPickerField from '../../components/ModalPickerField';
+import InlineLoadError from '../../components/InlineLoadError';
 import { styles } from './AdminCreateTournoiScreen.styles';
-import { RefreshCw } from 'lucide-react-native';
 
 type Props = NativeStackScreenProps<AdminStackParamList, 'AdminCreateTournoi'>;
 
@@ -513,44 +513,7 @@ export default function AdminCreateTournoiScreen({ navigation }: Props) {
   );
 }
 
-// ── Inline load-error row — used for the région/département pickers when their
-// backing lists fail to fetch. Deliberately not a full-page ErrorState: this
-// sits mid-form and must not discard whatever the admin has already typed. ──
-function InlineLoadError({
-  message, onRetry, colors,
-}: { message: string; onRetry: () => void; colors: ColorPalette }) {
-  return (
-    <TouchableOpacity
-      style={[inlineErrorStyles.row, { backgroundColor: colors.bgCard, borderColor: colors.borderSubtle }]}
-      onPress={onRetry}
-      activeOpacity={0.7}
-    >
-      <Text style={[inlineErrorStyles.text, { color: colors.textSecondary }]} numberOfLines={1}>
-        {message}
-      </Text>
-      <View style={inlineErrorStyles.retry}>
-        <RefreshCw size={13} color="#6366f1" strokeWidth={2.2} />
-        <Text style={inlineErrorStyles.retryText}>Réessayer</Text>
-      </View>
-    </TouchableOpacity>
-  );
-}
-
 const inlineErrorStyles = StyleSheet.create({
-  row: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    borderRadius: 12,
-    borderWidth: 1,
-    marginBottom: 16,
-    gap: 10,
-  },
-  text: { fontSize: 13, flex: 1 },
-  retry: { flexDirection: 'row', alignItems: 'center', gap: 5 },
-  retryText: { fontSize: 12, fontWeight: '700', color: '#6366f1' },
   submitError: {
     fontSize: 12,
     color: '#ef4444',
