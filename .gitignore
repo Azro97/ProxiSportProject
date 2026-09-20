@@ -10,6 +10,7 @@ android/keystore.properties
 ios/Pods/
 ios/build/
 ios/*.xcworkspace
+ios/*.code-workspace
 *.orig.*
 *.jsbundle
 .bundle/
@@ -19,6 +20,7 @@ build/
 .cxx/
 android/.kotlin/
 coverage/
+supabase/.temp/
 .env
 .env.local
 npm-debug.log
