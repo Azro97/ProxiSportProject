@@ -35,7 +35,11 @@ type Sheet = 'region' | 'division' | null;
 const shortDiv = (d: Division): string => {
   if (d.startsWith('Nat')) return 'N' + d.slice(-1);
   if (d.startsWith('Rég')) return 'R' + d.slice(-1);
-  return 'D' + d.slice(-1);
+  if (d.startsWith('Dép')) return 'D' + d.slice(-1);
+  if (d === 'Juniors M21') return 'M21';
+  if (d === 'Excellence M18') return 'ExM18';
+  if (d === 'Honneur M18') return 'HnM18';
+  return '4x4M18';
 };
 
 export default function AffinerFilter({ disabled = false }: { disabled?: boolean }) {
