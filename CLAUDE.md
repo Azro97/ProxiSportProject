@@ -162,6 +162,66 @@ cd android
 - Dependency direction: `screens -> stores -> services -> supabase` (one-way)
 - Map library: `@maplibre/maplibre-react-native@10.4.2` (pinned — v11+ requires React 19)
 
+## Frontend conventions
+
+This is the canonical reference for the rules below — in-repo code comments should
+point here by name (e.g. "see CLAUDE.md's Frontend conventions"), not at a numbered
+section, and not at any doc outside this repository. A few comments used to cite
+"CLAUDE.md §3/§5/§6"; those numbers belong to a different, non-repo spec document
+that doesn't ship with the code, so nobody cloning this repo could ever resolve
+them. Fixed to point here instead (2026-09-20).
+
+**Services → Supabase.** Six files import `./supabase` directly today —
+`terrainsService.ts`, `matchsService.ts`, `equipesService.ts`, `tournoiService.ts`,
+`authService.ts`, `paymentService.ts` (the last two added for the auth/Stripe
+work; the "only 4 services" framing from earlier is stale). No `screens/` or
+`stores/` file should import it — `authStore.ts`'s type-only `import type {
+Session, User } from '@supabase/supabase-js'` is the one accepted exception,
+since it imports no client and calls no Supabase API.
+
+**Every service function wraps its Supabase call in `withTimeout`**
+(`src/services/withTimeout.ts`, 10s) — a flaky connection otherwise hangs
+forever instead of rejecting, leaving a screen stuck on "loading" with no way
+to surface `ErrorState`'s retry UI. When adding a new service function, wrap it
+the same way, including calls into `supabase.functions.invoke(...)` and
+`supabase.auth.*` — not just `.from(...)`/`.rpc(...)`. A subscription-based
+call like `supabase.auth.onAuthStateChange(...)` is the one thing that can't be
+wrapped this way (it has no single resolve/reject), and is left alone.
+
+**Two different error UIs, on purpose:**
+- `src/components/ErrorState.tsx` (icon + message + retry) — for a screen/section
+  whose entire data fetch failed. Used across 2+ screens, which is why it lives
+  in `src/components` (promote a component there only once 2+ screens need it;
+  otherwise it belongs in that screen's own `components/` folder).
+- `src/components/InlineLoadError.tsx` — for a single field inside a form (e.g.
+  a région/département picker) whose backing list failed to fetch. Deliberately
+  *not* `ErrorState`: swapping the whole form out for a full error view would
+  discard whatever the user already typed elsewhere on the same screen. Used by
+  `AdminCreateTournoiScreen` and `AdminCreateEquipeScreen`.
+
+**`filtresStore` (Matchs screen) — current cascade rules** (`src/stores/filtresStore.ts`):
+- `setSport`: sets sport, auto-selects the nearest region from GPS if a
+  position is available (else leaves regions empty), resets `departement` and
+  `divisions`, resets `date` to `null`.
+- `toggleRegion`: adds/removes one region from the multi-select, always resets
+  `divisions` (a division only makes sense within a region scope).
+- `clearRegions`: clears both regions and divisions ("Tous" for regions).
+- `toggleDivision` / `toggleDivisionGroup` / `clearDivisions`: division
+  multi-select, including toggling a whole group at once (e.g. all four
+  "Jeunes" M18/M21 levels together).
+- `date: null` means **"all dates"** (the "Tous" date chip) — it is a
+  meaningful, intentional state, not an invalid one to guard against.
+- `getMatchs()` (`matchsService.ts`) only requires `sport`; `regions`,
+  `divisions` and `date` are optional, additive filters — an empty array or a
+  null date means "no restriction on that dimension," not "block the fetch."
+  `MatchsScreen` fetches as soon as `sport` is set.
+
+**Avoid `any`.** `colors: ColorPalette` (from `theme.ts`), not `colors: any` —
+several shared components had this and it hid a real bug (a stale `terrain as
+any` cast in `CarteScreen.tsx` silently made a sport-emoji lookup always
+`undefined`). The one accepted exception is `row: any` in each service's own
+`toX(row)` Supabase-row mapper, until generated DB types exist.
+
 ## Backend migration: Firebase Firestore → Supabase (2026-07-19)
 
 The app **no longer uses Firebase**. `@react-native-firebase/app` and `@react-native-firebase/firestore` were removed from `package.json`; `src/services/firebase.ts` was replaced by `src/services/supabase.ts` (a single `createClient()` singleton, config via `.env` / `react-native-dotenv`, `@env` module — see `src/env.d.ts`).

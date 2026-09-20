@@ -1,6 +1,7 @@
 // src/screens/matchs/MatchsScreen.tsx
 // Filters: Sport (single) → Affiner (Région + Division via modals) → Date.
-// Filter state lives in filtresStore (Zustand). See CLAUDE.md §5.
+// Filter state lives in filtresStore (Zustand). See CLAUDE.md's
+// "Frontend conventions" section for the exact cascade rules.
 
 import React, { useEffect, useMemo, useState } from 'react';
 import {

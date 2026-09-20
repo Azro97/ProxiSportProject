@@ -28,7 +28,9 @@ function toMatch(row: any): Match {
 /**
  * Fetch matches applying filters in priority order:
  * sport → region/departement → division → date range.
- * All 4 filters must be set before this is called (enforced by the store cascade).
+ * Every filter past sport is optional and additive — an empty regions/divisions
+ * array or a null date means "no filter on that dimension", not "block the
+ * fetch". MatchsScreen only requires a sport to be selected before calling this.
  */
 export async function getMatchs(filtres: Filtre): Promise<Match[]> {
   let query = supabase.from('matchs').select('*');

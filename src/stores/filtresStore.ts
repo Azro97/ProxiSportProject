@@ -2,7 +2,8 @@
 // Multi-select filter store for the Matchs screen.
 // Rule: setting Sport auto-selects the nearest region from GPS, resets divisions.
 // Toggling regions resets divisions.
-// date: null means "all dates" (TOUS chip selected). See CLAUDE.md §5.
+// date: null means "all dates" (TOUS chip selected). See CLAUDE.md's
+// "Frontend conventions" section for the full cascade rules.
 
 import { create } from 'zustand';
 import { Filtre, Division, DivisionGroupe, DIVISION_GROUPS } from '../models/Filtre';

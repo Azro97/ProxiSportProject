@@ -1,7 +1,9 @@
 // src/components/ErrorState.tsx
 // Shared fallback UI shown when a screen's data fetch fails (network/Supabase error).
 // Distinct from an "empty" state (fetch succeeded, zero rows) — this is for when the
-// fetch itself threw. Used across 2+ screens, so it lives in src/components per CLAUDE.md §3.
+// fetch itself threw. Used across 2+ screens, so it lives in src/components —
+// see CLAUDE.md's "Frontend conventions" section (also documents the
+// separate InlineLoadError, used for mid-form field failures instead of this).
 
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
