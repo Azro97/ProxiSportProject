@@ -166,8 +166,10 @@ export default function CarteScreen() {
             contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 32 }}
             ItemSeparatorComponent={() => <View style={{ height: 10 }} />}
             renderItem={({ item: terrain }) => {
-              const sport = (terrain as any).sport as string | undefined;
-              const emoji = sport ? (SPORT_EMOJI[sport] ?? '🏟️') : '🏟️';
+              // Terrain has no sport field of its own — visibleTerrains is
+              // already filtered down to sportFilter's sport when one is
+              // active, same as the map pin view below, so reuse it here.
+              const emoji = sportFilter ? (SPORT_EMOJI[sportFilter] ?? '🏟️') : '🏟️';
               return (
                 <TouchableOpacity
                   style={[styles.terrainCard, { backgroundColor: colors.bgCard, borderColor: colors.borderSubtle }]}
