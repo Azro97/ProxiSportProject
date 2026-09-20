@@ -17,6 +17,7 @@ ios/*.xcworkspace
 dist/
 build/
 .cxx/
+android/.kotlin/
 coverage/
 .env
 .env.local
