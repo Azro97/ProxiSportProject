@@ -43,6 +43,7 @@ export default function MesInscriptionsScreen({ navigation }: Props) {
   const isDark = useThemeStore(s => s.isDark);
   const insets = useSafeAreaInsets();
   const user = useAuthStore(s => s.user);
+  const initializing = useAuthStore(s => s.initializing);
   const signOut = useAuthStore(s => s.signOut);
   const deleteAccount = useAuthStore(s => s.deleteAccount);
   const styles = makeStyles(colors);
@@ -77,12 +78,16 @@ export default function MesInscriptionsScreen({ navigation }: Props) {
   }, [user]);
 
   useEffect(() => {
+    // Wait for AuthProvider's initial getSession() to resolve before deciding
+    // there's no user — otherwise a signed-in user routed straight here on
+    // cold start gets bounced to Login while the session is still loading.
+    if (initializing) return;
     if (!user) {
       navigation.replace('Login', { redirectToMesInscriptions: true });
       return;
     }
     load();
-  }, [user, load, navigation]);
+  }, [initializing, user, load, navigation]);
 
   async function handleLogout() {
     await signOut();
@@ -137,6 +142,13 @@ export default function MesInscriptionsScreen({ navigation }: Props) {
     );
   }
 
+  if (initializing) {
+    return (
+      <View style={[styles.root, { backgroundColor: colors.bgApp, paddingTop: insets.top }]}>
+        <ActivityIndicator style={{ marginTop: 40 }} size="large" color={colors.userPosition} />
+      </View>
+    );
+  }
   if (!user) return null;
 
   return (
