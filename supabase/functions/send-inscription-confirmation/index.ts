@@ -13,8 +13,8 @@ const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY')!;
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 
-// Verified sending domain in production; Resend's shared test address in dev.
-const FROM_ADDRESS = 'ProxiSport <onboarding@resend.dev>';
+// proxysport.org verified on Resend (resend.com/domains) 2026-10-01.
+const FROM_ADDRESS = 'ProxiSport <noreply@proxysport.org>';
 const ACCENT = '#3b82f6';
 
 // Team/member names are free-text user input — escape before interpolating
