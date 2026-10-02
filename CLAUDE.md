@@ -277,7 +277,6 @@ any` cast in `CarteScreen.tsx` silently made a sport-emoji lookup always
 - [ ] Decide whether to add `'warn'` to the `captureConsoleIntegration` levels once there's a sense of how noisy `'error'`-only actually is in practice.
 - [ ] iOS native setup — unverified, blocked on the same "iOS has never been built" constraint as everything else iOS-related in this doc.
 
-
 ## Backend migration: Firebase Firestore → Supabase (2026-07-19)
 
 The app **no longer uses Firebase**. `@react-native-firebase/app` and `@react-native-firebase/firestore` were removed from `package.json`; `src/services/firebase.ts` was replaced by `src/services/supabase.ts` (a single `createClient()` singleton, config via `.env` / `react-native-dotenv`, `@env` module — see `src/env.d.ts`).
@@ -388,4 +387,31 @@ iOS has never been built for this project. Steps needed:
 - [ ] iOS provisioning profile + signing configured in Xcode
 - [ ] App icons and splash screen added for both platforms
 - [ ] Test on a real device (not emulator) before submitting to stores
+
+### 5. App Store / Play Store submission checklist (researched 2026-10-02)
+
+Researched against Apple's and Google's actual current policies plus real developer-forum rejection reports, then checked against this codebase directly (not guessed). Split into: already fine, urgent/time-sensitive, and needs doing before submission.
+
+**Already fine — confirmed, don't second-guess these:**
+- Stripe without platform billing is allowed on **both** stores: real-world event registration/ticketing is explicitly exempted from Apple's IAP requirement and from Google Play's Billing policy alike (same "physical goods/services consumed outside the app" exemption on both).
+- "Sign in with Apple" is **not** required — that rule only triggers if you offer other third-party/social logins (Google, Facebook); this app only has Supabase email/password, no social login at all.
+- Account deletion in-app is done (`delete-account` Edge Function, Guideline 5.1.1(v)).
+- No App Tracking Transparency prompt needed — no ads/analytics SDK in the dependency tree.
+- `NSLocationWhenInUseUsageDescription` already has a clear, specific (non-vague) description.
+
+**🔴 Urgent — time-sensitive, don't leave for last:**
+- [x] **Google Play target API level — fixed 2026-10-02.** Google Play has required API 36 (Android 16) for new apps/updates since August 31, 2026 — `targetSdkVersion` was still 35 (deliberately, to avoid untested edge-to-edge display behavior — see the RN 0.81.6 upgrade notes above) at the time this checklist was researched, which was already past that deadline. Bumped to 36 in `android/build.gradle`. Confirmed all 17 top-level screens already use `useSafeAreaInsets`/`SafeAreaView` consistently, so the mandatory edge-to-edge-by-default behavior shouldn't regress anything — still worth a full visual pass across every screen before a real release, not just taking that reasoning on faith.
+- **Google Play closed testing requirement, if this is a new/personal developer account.** Any personal Google Play Developer account created after November 13, 2023 must run a closed test with **12 opted-in testers for 14 continuous days** (not 12 invites — 12 people who actually accept and install it) before Google allows a production release. This takes real calendar time and needs 12 real people lined up, so it has to start well before a planned launch date, not be treated as a last-step formality. *(Needs a decision: do we already have a Play Developer account, and when was it created? If it's new, start recruiting testers now.)*
+
+**🟡 Needs doing — concrete gaps found in the project itself:**
+- **No iOS app icon exists at all** — `ios/PP/Images.xcassets/AppIcon.appiconset/` has only the `Contents.json` manifest, zero actual image files. Xcode can't archive a submittable build without these.
+- **Android's app icon is still React Native's generic default placeholder** (checked the actual PNG — it's the white robot head on a teal grid, not a custom ProxiSport icon).
+- **`CFBundleDisplayName` in `Info.plist` is still `"PP"`**, not `"ProxiSport"` — this is what shows under the icon on a home screen.
+- **`Info.plist` is missing `UISupportedInterfaceOrientations~ipad`** (only the iPhone key exists) — a specifically-named, recurring trigger in 2026 Apple Developer Forum rejection threads for Guideline 2.1 iPad issues. Apple reviews every app on real iPad hardware regardless of declared device family (`TARGETED_DEVICE_FAMILY` isn't explicitly set anywhere in this Xcode project either — worth confirming on a Mac). You don't need an adapted iPad layout, you need to not look broken on one — this has never been tested since iOS has never been built.
+- **Privacy Manifest (`PrivacyInfo.xcprivacy`) is almost certainly incomplete.** It currently only declares React Native core's own required-reason API usage (file timestamps, UserDefaults, boot time) — it hasn't been verified to account for the third-party native SDKs (Stripe, MapLibre) that each need their own entries aggregated in here. This has never been exercised by a real Xcode archive, which is usually what surfaces missing declarations.
+- **Apple Pay isn't wired up.** Not a hard documented rule on either store, but real forum-documented rejection risk on Apple's side specifically when a reviewer expects it alongside card entry (Apple staff declined to give a yes/no when directly asked in a 2026 forum thread, calling it case-by-case). Lower priority than the items above, but worth doing before submitting, not after a rejection.
+- **No working demo account prepared for Apple App Review.** Sign-up requires email confirmation (`needsEmailConfirmation` in `authStore.ts`/`SignUpScreen.tsx`) — a reviewer cannot complete that step themselves (no access to a real inbox, and definitely not one behind an OTP/SMS code). Must create and manually confirm a demo account **before submitting** and provide its working credentials in App Store Connect's "App Review Information" notes — an account that still works on the day of review, not one made weeks earlier that might have an expired session or a changed password.
+- **No public Privacy Policy URL confirmed to exist yet** — required in both App Store Connect's and Play Console's listing metadata regardless of anything else being correct.
+- **Release build format**: confirm the Android release build actually produces a `.aab` (Android App Bundle) — Play Console requires this for new apps, not a bare `.apk`.
+- Minor/low-risk: no `ITSAppUsesNonExemptEncryption` key set in `Info.plist` — not a rejection cause by itself, just means App Store Connect will ask the export-compliance question on every single submission instead of skipping it; worth setting to `false` once, for convenience, since the app only uses standard HTTPS.
 
