@@ -24,6 +24,16 @@ const SPORT_EMOJI: Record<string, string> = {
   foot: '⚽', basket: '🏀', hand: '🤾', volley: '🏐',
 };
 
+// TEMPORARY, for beta/demo purposes — Stripe is not configured yet (no
+// account, no deployed Edge Function secrets, no real publishable key; see
+// CLAUDE.md's Payment (Stripe) TODO), so every paid registration currently
+// fails at createPaymentIntent(). Until that's set up for real, paid
+// tournois skip the actual charge and go through the same instant-confirm
+// path as free ones — the UI still shows the real price and "Paiement
+// reçu !" so the app demos as if payment happened, but nobody is actually
+// charged. Set to false once Stripe is configured.
+const SKIP_STRIPE_FOR_BETA = true;
+
 type Step = 'choice' | 'form' | 'recap' | 'success' | 'error';
 
 interface Props {
@@ -109,7 +119,7 @@ export default function InscriptionModal({ visible, tournoi, onClose, onRequestA
   async function handlePay() {
     const membresTrimmed = members.filter(m => m.trim().length > 0).map(m => m.trim());
 
-    if (isFree) {
+    if (isFree || SKIP_STRIPE_FOR_BETA) {
       setPaying(true);
       try {
         await createInscription({
@@ -117,10 +127,11 @@ export default function InscriptionModal({ visible, tournoi, onClose, onRequestA
           equipe_nom: teamName.trim(),
           capitaine_email: email.trim(),
           membres: membresTrimmed,
-          montant_payé: 0,
+          montant_payé: tournoi.prixInscription,
         });
         setStep('success');
-      } catch {
+      } catch (err) {
+        console.error('[InscriptionModal] createInscription failed:', err);
         setErrorMessage(null);
         setStep('error');
       } finally {
@@ -129,8 +140,9 @@ export default function InscriptionModal({ visible, tournoi, onClose, onRequestA
       return;
     }
 
-    // Paid tournoi — Stripe flow. Confirmation is webhook-driven server-side
-    // (see supabase/functions/stripe-webhook) — success here means the charge
+    // Paid tournoi — real Stripe flow (unreachable while SKIP_STRIPE_FOR_BETA
+    // is true, above). Confirmation is webhook-driven server-side (see
+    // supabase/functions/stripe-webhook) — success here means the charge
     // went through, not that the row is flipped to 'confirmée' yet.
     setPaying(true);
     try {
@@ -168,7 +180,8 @@ export default function InscriptionModal({ visible, tournoi, onClose, onRequestA
       }
 
       setStep('success');
-    } catch {
+    } catch (err) {
+      console.error('[InscriptionModal] Stripe payment flow failed:', err);
       setErrorMessage('Vérifiez votre connexion internet et réessayez. Aucun paiement n\'a été débité.');
       setStep('error');
     } finally {
@@ -178,7 +191,12 @@ export default function InscriptionModal({ visible, tournoi, onClose, onRequestA
 
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={handleClose} statusBarTranslucent>
-      <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+      {/* behavior=undefined on Android: the Activity's windowSoftInputMode="adjustResize"
+          (AndroidManifest.xml) already resizes the window when the keyboard opens - inside
+          an actual Modal, layering KeyboardAvoidingView's own "height" adjustment on top of
+          that fights the OS resize every animation frame and flickers. AdminCreateEquipeScreen
+          and AdminCreateTournoiScreen already use this same pattern. */}
+      <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <View style={styles.scrim}>
           <TouchableOpacity style={StyleSheet.absoluteFillObject} onPress={handleClose} activeOpacity={1} />
 

@@ -142,6 +142,8 @@ cd android
   Free tournaments are unaffected either way.
   **Deliberately deferred, add later**: Apple Pay is NOT wired up — `initPaymentSheet` only enables standard card entry today. Apple Pay needs its own native setup (merchant identifier, Xcode "Apple Pay" capability, `Info.plist` entry) that isn't worth doing before this app has been built for iOS even once (see iOS section below). When it's time: add `applePay: { merchantCountryCode: 'FR' }` to `initPaymentSheet`'s options in `InscriptionModal.tsx`, plus the native config.
 
+  > ⚠️ **`SKIP_STRIPE_FOR_BETA = true` in `InscriptionModal.tsx` (2026-09-20).** Since Stripe isn't configured (above), every paid registration currently fails at `createPaymentIntent()` — there's also no free tournament in `seed.sql` to fall back on for testing. This flag makes every registration, paid or free, go through the free tournament's instant-confirm path (`create_inscription` directly, no real charge), while the UI still shows the real price and "Paiement reçu !" so the app demos convincingly for beta testers. **This is the same code path the backend audit flagged as a payment-bypass vulnerability** (`create_inscription` has no server-side check that a tournoi is actually free) — it's being used deliberately here, not fixed. **Must be set back to `false`, and the backend hole in `create_inscription` actually closed, before any real user could pay for real and anyone else could still register for free.**
+
 ### Medium priority (UX polish)
 
 - [ ] **Live match indicator** — `liveRed` color in theme, `LiveDot` component exists in the other frontend. Port to `MatchCard` / `MatchsScreen` for in-progress matches.
@@ -216,6 +218,24 @@ wrapped this way (it has no single resolve/reject), and is left alone.
   `divisions` and `date` are optional, additive filters — an empty array or a
   null date means "no restriction on that dimension," not "block the fetch."
   `MatchsScreen` fetches as soon as `sport` is set.
+
+**`KeyboardAvoidingView` inside a real `<Modal>`: never use `behavior="height"`
+on Android.** The Activity already has `android:windowSoftInputMode="adjustResize"`
+(`AndroidManifest.xml`) — the OS resizes the window itself when the keyboard
+opens. A `<Modal>` is a separate native window, and layering
+`KeyboardAvoidingView`'s own `"height"` adjustment on top of that inside one
+makes the two resize mechanisms fight every animation frame while the
+keyboard opens, producing a visible flicker (found in `InscriptionModal.tsx`,
+2026-09-20 — its `<Modal>` wraps a `KeyboardAvoidingView` with `TextInput`s
+inside, the only place in the app that combination exists). Fixed there to
+`behavior={Platform.OS === 'ios' ? 'padding' : undefined}`, matching
+`AdminCreateEquipeScreen.tsx`/`AdminCreateTournoiScreen.tsx`, which already
+used this correctly. Those two also each render a `<Modal>` of their own (the
+région/département picker), but it's a plain `FlatList`, no `TextInput` and
+no `KeyboardAvoidingView` inside it — that combination is what's actually
+risky, not `<Modal>` alone. If a future modal needs both a `TextInput` and
+keyboard-avoidance, use `undefined` (Android) from the start rather than
+copying `'height'` from a non-modal screen like `LoginScreen.tsx`.
 
 **Avoid `any`.** `colors: ColorPalette` (from `theme.ts`), not `colors: any` —
 several shared components had this and it hid a real bug (a stale `terrain as
