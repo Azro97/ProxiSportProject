@@ -69,7 +69,8 @@ export default function MesInscriptionsScreen({ navigation }: Props) {
       const map: Record<string, Tournoi> = {};
       pairs.forEach(([id, t]) => { if (t) map[id] = t; });
       setTournois(map);
-    } catch {
+    } catch (err) {
+      console.error('[MesInscriptionsScreen] load failed:', err);
       setError(true);
     } finally {
       setLoading(false);
@@ -109,7 +110,8 @@ export default function MesInscriptionsScreen({ navigation }: Props) {
             try {
               await cancelInscription(item.id);
               await load();
-            } catch {
+            } catch (err) {
+              console.error('[MesInscriptionsScreen] cancelInscription failed:', err);
               Alert.alert('Erreur', "Impossible d'annuler l'inscription. Réessayez.");
             } finally {
               setCancellingId(null);
@@ -133,7 +135,8 @@ export default function MesInscriptionsScreen({ navigation }: Props) {
             try {
               await deleteAccount();
               navigation.goBack();
-            } catch {
+            } catch (err) {
+              console.error('[MesInscriptionsScreen] deleteAccount failed:', err);
               Alert.alert('Erreur', 'Impossible de supprimer le compte pour le moment. Réessayez plus tard.');
             }
           },

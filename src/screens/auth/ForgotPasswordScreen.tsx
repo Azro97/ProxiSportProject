@@ -32,9 +32,11 @@ export default function ForgotPasswordScreen({ navigation }: Props) {
     setLoading(true);
     try {
       await resetPassword(email.trim());
-    } catch {
-      // Deliberately silent — always show the same success state below,
-      // regardless of whether the email exists, to avoid account enumeration.
+    } catch (err) {
+      // Deliberately silent to the USER — always show the same success state
+      // below, regardless of whether the email exists, to avoid account
+      // enumeration. Still logged for our own debugging.
+      console.error('[ForgotPasswordScreen] resetPassword failed:', err);
     } finally {
       setLoading(false);
       setSent(true);

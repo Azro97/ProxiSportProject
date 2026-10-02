@@ -63,7 +63,7 @@ export default function AdminCreateEquipeScreen({ navigation }: Props) {
       if (!alive) return;
       setRegions(list);
       setRegion(prev => prev || list[0] || '');
-    }).catch(() => { if (alive) setRegionsError(true); });
+    }).catch(err => { console.error('[AdminCreateEquipeScreen] getRegions failed:', err); if (alive) setRegionsError(true); });
     return () => { alive = false; };
   }, [regionsReload]);
 
@@ -75,7 +75,7 @@ export default function AdminCreateEquipeScreen({ navigation }: Props) {
       if (!alive) return;
       setDepartements(list);
       setDept(prev => (list.includes(prev) ? prev : list[0] ?? ''));
-    }).catch(() => { if (alive) setDepartementsError(true); });
+    }).catch(err => { console.error('[AdminCreateEquipeScreen] getDepartements failed:', err); if (alive) setDepartementsError(true); });
     return () => { alive = false; };
   }, [region, departementsReload]);
 
@@ -91,7 +91,8 @@ export default function AdminCreateEquipeScreen({ navigation }: Props) {
     try {
       await createEquipe({ nom: nom.trim(), sport, region, departement: dept });
       navigation.goBack();
-    } catch {
+    } catch (err) {
+      console.error('[AdminCreateEquipeScreen] createEquipe failed:', err);
       setErrors(prev => ({ ...prev, submit: "Échec de la création de l'équipe. Vérifiez votre connexion et réessayez." }));
     } finally {
       setSaving(false);

@@ -44,7 +44,7 @@ export default function TerrainModal({ terrain, onClose }: Props) {
     setError(false);
     getMatchsByTerrain(terrain.id)
       .then(setMatchs)
-      .catch(() => setError(true))
+      .catch(err => { console.error('[TerrainModal] getMatchsByTerrain failed:', err); setError(true); })
       .finally(() => setLoading(false));
   }, [terrain.id]);
 

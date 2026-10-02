@@ -69,7 +69,8 @@ export default function MatchsScreen() {
       pairs.forEach(([id, t]) => { if (t) map[id] = t; });
       setTerrains(map);
       setError(false);
-    } catch {
+    } catch (err) {
+      console.error('[MatchsScreen] loadUpcoming failed:', err);
       setError(true);
     } finally {
       setLoading(false);
@@ -81,7 +82,7 @@ export default function MatchsScreen() {
     setResultsLoading(true);
     getMatchsJoues(sport ?? undefined)
       .then(data => { setResults(data); setResultsError(false); })
-      .catch(() => setResultsError(true))
+      .catch(err => { console.error('[MatchsScreen] loadResults failed:', err); setResultsError(true); })
       .finally(() => setResultsLoading(false));
   }, [sport]);
 

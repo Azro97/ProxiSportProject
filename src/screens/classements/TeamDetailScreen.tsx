@@ -62,10 +62,13 @@ export default function TeamDetailScreen({ route, navigation }: Props) {
       .then(e => {
         setEquipe(e);
         if (e) {
-          getMatchsByEquipe(equipeId).then(setMatches).catch(() => setError(true));
+          getMatchsByEquipe(equipeId).then(setMatches).catch(err => {
+            console.error('[TeamDetailScreen] getMatchsByEquipe failed:', err);
+            setError(true);
+          });
         }
       })
-      .catch(() => setError(true));
+      .catch(err => { console.error('[TeamDetailScreen] getEquipeById failed:', err); setError(true); });
   }, [equipeId]);
 
   useEffect(() => { load(); }, [load]);

@@ -42,7 +42,8 @@ export default function LoginScreen({ navigation, route }: Props) {
       } else {
         navigation.goBack();
       }
-    } catch {
+    } catch (err) {
+      console.error('[LoginScreen] signIn failed:', err);
       setError('Email ou mot de passe incorrect.');
     } finally {
       setLoading(false);

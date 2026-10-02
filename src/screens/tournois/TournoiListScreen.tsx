@@ -60,7 +60,8 @@ export default function TournoiListScreen({ navigation }: Props) {
       const data = await getTournois();
       setAllTournois(data);
       setError(false);
-    } catch {
+    } catch (err) {
+      console.error('[TournoiListScreen] getTournois failed:', err);
       setError(true);
     } finally {
       setLoading(false);

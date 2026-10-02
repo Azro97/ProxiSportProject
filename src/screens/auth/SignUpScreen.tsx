@@ -54,6 +54,7 @@ export default function SignUpScreen({ navigation, route }: Props) {
         navigation.goBack();
       }
     } catch (e: any) {
+      console.error('[SignUpScreen] signUp failed:', e);
       setError(e?.message?.includes('already registered')
         ? 'Un compte existe déjà avec cet email.'
         : 'Impossible de créer le compte. Réessayez.');

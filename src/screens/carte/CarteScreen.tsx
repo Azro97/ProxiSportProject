@@ -100,7 +100,7 @@ export default function CarteScreen() {
     setTerrainsLoading(true);
     getTerrainsByLocation(centerLat, centerLng, RADIUS_KM)
       .then(setTerrains)
-      .catch(() => setTerrainsError(true))
+      .catch(err => { console.error('[CarteScreen] getTerrainsByLocation failed:', err); setTerrainsError(true); })
       .finally(() => setTerrainsLoading(false));
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [centerLat, centerLng]);
@@ -112,7 +112,7 @@ export default function CarteScreen() {
     getTerrainIdsForSport(sportFilter).then(ids => {
       setSportTerrainIds(ids);
       setSelectedTerrain(prev => (prev && !ids.has(prev.id) ? null : prev));
-    }).catch(() => setSportTerrainIds(new Set()));
+    }).catch(err => { console.error('[CarteScreen] getTerrainIdsForSport failed:', err); setSportTerrainIds(new Set()); });
   }, [sportFilter]);
 
   const visibleTerrains = sportFilter && sportTerrainIds

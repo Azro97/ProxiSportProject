@@ -78,7 +78,7 @@ export default function AdminCreateTournoiScreen({ navigation }: Props) {
       if (!alive) return;
       setRegions(list);
       setRegion(prev => prev || list[0] || '');
-    }).catch(() => { if (alive) setRegionsError(true); });
+    }).catch(err => { console.error('[AdminCreateTournoiScreen] getRegions failed:', err); if (alive) setRegionsError(true); });
     return () => { alive = false; };
   }, [regionsReload]);
 
@@ -90,7 +90,7 @@ export default function AdminCreateTournoiScreen({ navigation }: Props) {
       if (!alive) return;
       setDepartements(list);
       setDept(prev => (list.includes(prev) ? prev : list[0] ?? ''));
-    }).catch(() => { if (alive) setDepartementsError(true); });
+    }).catch(err => { console.error('[AdminCreateTournoiScreen] getDepartements failed:', err); if (alive) setDepartementsError(true); });
     return () => { alive = false; };
   }, [region, departementsReload]);
 
@@ -172,7 +172,8 @@ export default function AdminCreateTournoiScreen({ navigation }: Props) {
         departement:            dept,
       });
       navigation.goBack();
-    } catch {
+    } catch (err) {
+      console.error('[AdminCreateTournoiScreen] createTournoi failed:', err);
       setErrors(prev => ({ ...prev, submit: "Échec de la création du tournoi. Vérifiez votre connexion et réessayez." }));
     } finally {
       setSaving(false);

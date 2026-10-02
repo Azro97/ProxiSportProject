@@ -55,7 +55,7 @@ export default function ClassementsScreen() {
     setError(false);
     getAllEquipes()
       .then(teams => setAllTeams(teams.sort((a, b) => a.nom.localeCompare(b.nom, 'fr'))))
-      .catch(() => { setAllTeams([]); setError(true); })
+      .catch(err => { console.error('[ClassementsScreen] getAllEquipes failed:', err); setAllTeams([]); setError(true); })
       .finally(() => setLoading(false));
   }, []);
 

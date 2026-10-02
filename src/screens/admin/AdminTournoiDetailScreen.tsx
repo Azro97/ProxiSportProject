@@ -69,7 +69,8 @@ export default function AdminTournoiDetailScreen({ navigation, route }: Props) {
       ]);
       setTournoi(t);
       setInscriptions(ins);
-    } catch {
+    } catch (err) {
+      console.error('[AdminTournoiDetailScreen] load failed:', err);
       setError(true);
     } finally {
       setLoading(false);

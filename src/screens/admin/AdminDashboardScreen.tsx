@@ -53,7 +53,8 @@ export default function AdminDashboardScreen({ navigation }: Props) {
       const data = await getTournois();
       setTournois(data);
       setError(false);
-    } catch {
+    } catch (err) {
+      console.error('[AdminDashboardScreen] getTournois failed:', err);
       setError(true);
     } finally {
       setLoading(false);

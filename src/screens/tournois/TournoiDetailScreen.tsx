@@ -72,7 +72,7 @@ export default function TournoiDetailScreen({ route, navigation }: Props) {
     setError(false);
     getTournoiById(tournoiId)
       .then(setTournoi)
-      .catch(() => setError(true))
+      .catch(err => { console.error('[TournoiDetailScreen] getTournoiById failed:', err); setError(true); })
       .finally(() => setLoading(false));
   }, [tournoiId]);
 
@@ -133,7 +133,7 @@ export default function TournoiDetailScreen({ route, navigation }: Props) {
     const url = Platform.OS === 'ios'
       ? `maps:?q=${q}`
       : `https://www.google.com/maps/search/?api=1&query=${q}`;
-    Linking.openURL(url).catch(() => {});
+    Linking.openURL(url).catch(err => console.warn('[TournoiDetailScreen] Linking.openURL failed:', err));
   }
 
   return (

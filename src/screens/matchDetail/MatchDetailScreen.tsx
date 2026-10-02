@@ -48,9 +48,12 @@ export default function MatchDetailScreen({ route, navigation }: Props) {
     getMatchById(matchId)
       .then(m => {
         setMatch(m);
-        if (m) getTerrainById(m.terrain_id).then(setTerrain).catch(() => {});
+        if (m) getTerrainById(m.terrain_id).then(setTerrain).catch(err => {
+          // Non-critical: the match itself already loaded fine, terrain is secondary.
+          console.warn('[MatchDetailScreen] getTerrainById failed:', err);
+        });
       })
-      .catch(() => setError(true));
+      .catch(err => { console.error('[MatchDetailScreen] getMatchById failed:', err); setError(true); });
   }, [matchId]);
 
   useEffect(() => { load(); }, [load]);

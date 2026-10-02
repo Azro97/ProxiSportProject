@@ -69,7 +69,8 @@ export default function GpsIntroScreen({ onDone }: Props) {
           setStatus('denied');
         }
       }
-    } catch {
+    } catch (err) {
+      console.error('[GpsIntroScreen] location permission request failed:', err);
       setStatus('denied');
     } finally {
       await markSeen();
