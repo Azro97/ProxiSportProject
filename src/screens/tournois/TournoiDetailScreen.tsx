@@ -16,6 +16,8 @@ import { useFocusEffect } from '@react-navigation/native';
 import { RootStackParamList } from '../../types';
 import { Tournoi } from '../../models/Tournoi';
 import { getTournoiById, formatPrix } from '../../services/tournoiService';
+import { getEffectiveStatut } from '../../utils/tournoi';
+import { useRefocusRefresh } from '../../hooks/useRefocusRefresh';
 import { useColors } from '../../hooks/useColors';
 import { infoStyles, styles } from './TournoiDetailScreen.styles';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -67,16 +69,20 @@ export default function TournoiDetailScreen({ route, navigation }: Props) {
     }, [reopenModalOnFocus]),
   );
 
-  const load = React.useCallback(() => {
-    setLoading(true);
+  // silent=true skips the full-screen spinner — used for background refreshes
+  // (on refocus, or right after a registration succeeds) so the already-visible
+  // content doesn't flash back to a loading state just to pick up a count change.
+  const load = React.useCallback((silent = false) => {
+    if (!silent) setLoading(true);
     setError(false);
     getTournoiById(tournoiId)
       .then(setTournoi)
       .catch(err => { console.error('[TournoiDetailScreen] getTournoiById failed:', err); setError(true); })
-      .finally(() => setLoading(false));
+      .finally(() => { if (!silent) setLoading(false); });
   }, [tournoiId]);
 
   useEffect(() => { load(); }, [load]);
+  useRefocusRefresh(React.useCallback(() => load(true), [load]));
 
   if (loading) {
     return (
@@ -114,7 +120,8 @@ export default function TournoiDetailScreen({ route, navigation }: Props) {
 
   const accent = sportColors[tournoi.sport] ?? colors.userPosition;
   const accentSoft = sportColorsSoft[tournoi.sport] ?? colors.bgCard;
-  const statut = STATUT_CONFIG[tournoi.statut] ?? STATUT_CONFIG.annulé;
+  const effectiveStatut = getEffectiveStatut(tournoi);
+  const statut = STATUT_CONFIG[effectiveStatut] ?? STATUT_CONFIG.annulé;
   const fillPct = tournoi.maxEquipes > 0
     ? Math.min(tournoi.equipesInscrites / tournoi.maxEquipes, 1)
     : 0;
@@ -126,7 +133,7 @@ export default function TournoiDetailScreen({ route, navigation }: Props) {
   const formatShort = (d: Date) =>
     d.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' });
 
-  const canRegister = tournoi.statut === 'ouvert';
+  const canRegister = effectiveStatut === 'ouvert';
 
   function openMaps() {
     const q = encodeURIComponent(`${tournoi!.terrain_nom}, ${tournoi!.terrain_ville}`);
@@ -230,9 +237,9 @@ export default function TournoiDetailScreen({ route, navigation }: Props) {
             </View>
 
             <Text style={[styles.spotsText, { color: colors.textSecondary }]}>
-              {tournoi.statut === 'ouvert' && spotsLeft > 0
+              {effectiveStatut === 'ouvert' && spotsLeft > 0
                 ? `${spotsLeft} place${spotsLeft > 1 ? 's' : ''} disponible${spotsLeft > 1 ? 's' : ''}`
-                : tournoi.statut === 'complet'
+                : effectiveStatut === 'complet'
                 ? 'Tournoi complet'
                 : ''}
             </Text>
@@ -292,6 +299,7 @@ export default function TournoiDetailScreen({ route, navigation }: Props) {
         tournoi={tournoi}
         onClose={() => setModalVisible(false)}
         onRequestAuth={() => { setModalVisible(false); setReopenModalOnFocus(true); }}
+        onSuccess={() => load(true)}
       />
     </View>
   );

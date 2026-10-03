@@ -15,6 +15,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AdminStackParamList } from '../../types';
 import { Tournoi } from '../../models/Tournoi';
 import { getTournois, formatPrix } from '../../services/tournoiService';
+import { getEffectiveStatut } from '../../utils/tournoi';
+import { useRefocusRefresh } from '../../hooks/useRefocusRefresh';
 import { useAdminStore } from '../../stores/adminStore';
 import { sportColors } from '../../theme';
 import { useColors } from '../../hooks/useColors';
@@ -63,10 +65,11 @@ export default function AdminDashboardScreen({ navigation }: Props) {
   }, []);
 
   useEffect(() => { load(); }, [load]);
+  useRefocusRefresh(useCallback(() => load(true), [load]));
 
   // Stats
   const total      = tournois.length;
-  const ouverts    = tournois.filter(t => t.statut === 'ouvert').length;
+  const ouverts    = tournois.filter(t => getEffectiveStatut(t) === 'ouvert').length;
   const aVenir     = tournois.filter(t => t.dateDebut > new Date()).length;
   const totalInscrits = tournois.reduce((acc, t) => acc + t.equipesInscrites, 0);
 
@@ -81,7 +84,7 @@ export default function AdminDashboardScreen({ navigation }: Props) {
 
   function renderTournoiCard({ item }: { item: Tournoi }) {
     const accent  = sportColors[item.sport] ?? '#3b82f6';
-    const statut  = STATUT_CONFIG[item.statut] ?? STATUT_CONFIG.ouvert;
+    const statut  = STATUT_CONFIG[getEffectiveStatut(item)] ?? STATUT_CONFIG.ouvert;
     const pct     = item.maxEquipes > 0 ? item.equipesInscrites / item.maxEquipes : 0;
     const dateStr = item.dateDebut.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' });
 

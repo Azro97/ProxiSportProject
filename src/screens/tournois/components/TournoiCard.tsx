@@ -7,6 +7,7 @@ import { Calendar, MapPin, Users } from 'lucide-react-native';
 import { Tournoi } from '../../../models/Tournoi';
 import { sportColors } from '../../../theme';
 import { formatPrix } from '../../../services/tournoiService';
+import { getEffectiveStatut } from '../../../utils/tournoi';
 import { styles } from './TournoiCard.styles';
 
 const SPORT_EMOJI: Record<string, string> = {
@@ -32,7 +33,8 @@ type Props = { tournoi: Tournoi; onPress: () => void };
 
 export default function TournoiCard({ tournoi, onPress }: Props) {
   const accent = sportColors[tournoi.sport] ?? '#6b7280';
-  const statut = STATUT_CONFIG[tournoi.statut] ?? STATUT_CONFIG.annulé;
+  const effectiveStatut = getEffectiveStatut(tournoi);
+  const statut = STATUT_CONFIG[effectiveStatut] ?? STATUT_CONFIG.annulé;
   const fillPct = tournoi.maxEquipes > 0
     ? Math.min(tournoi.equipesInscrites / tournoi.maxEquipes, 1)
     : 0;
@@ -108,7 +110,7 @@ export default function TournoiCard({ tournoi, onPress }: Props) {
               <Users size={10} color="rgba(255,255,255,0.6)" strokeWidth={2} />
               <Text style={styles.progressLabel}>
                 {tournoi.equipesInscrites}/{tournoi.maxEquipes}
-                {tournoi.statut === 'ouvert' && spotsLeft <= 4 && spotsLeft > 0
+                {effectiveStatut === 'ouvert' && spotsLeft <= 4 && spotsLeft > 0
                   ? ` · ${spotsLeft} restante${spotsLeft > 1 ? 's' : ''}`
                   : ''}
               </Text>

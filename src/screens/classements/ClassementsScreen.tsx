@@ -19,6 +19,7 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { type ColorPalette, sportColors, sportColorsSoft } from '../../theme';
 import { useColors } from '../../hooks/useColors';
 import { getAllEquipes } from '../../services/equipesService';
+import { useRefocusRefresh } from '../../hooks/useRefocusRefresh';
 import { Equipe } from '../../models/Equipe';
 import { RootStackParamList } from '../../types';
 import ErrorState from '../../components/ErrorState';
@@ -50,16 +51,20 @@ export default function ClassementsScreen() {
   const [focused, setFocused] = useState(false);
   const inputRef = useRef<TextInput>(null);
 
-  const load = useCallback(() => {
-    setLoading(true);
+  // silent=true skips the full-screen spinner — used for the background
+  // refresh on refocus (e.g. an admin just created a new equipe elsewhere)
+  // so the already-visible list doesn't flash back to a loading state.
+  const load = useCallback((silent = false) => {
+    if (!silent) setLoading(true);
     setError(false);
     getAllEquipes()
       .then(teams => setAllTeams(teams.sort((a, b) => a.nom.localeCompare(b.nom, 'fr'))))
       .catch(err => { console.error('[ClassementsScreen] getAllEquipes failed:', err); setAllTeams([]); setError(true); })
-      .finally(() => setLoading(false));
+      .finally(() => { if (!silent) setLoading(false); });
   }, []);
 
   useEffect(() => { load(); }, [load]);
+  useRefocusRefresh(useCallback(() => load(true), [load]));
 
   const displayed = useMemo(() => {
     let list = sportFilter ? allTeams.filter(e => e.sport === sportFilter) : allTeams;

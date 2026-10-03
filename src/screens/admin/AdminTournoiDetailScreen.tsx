@@ -17,6 +17,8 @@ import { AdminStackParamList } from '../../types';
 import { Tournoi } from '../../models/Tournoi';
 import { Inscription } from '../../models/Inscription';
 import { getTournoiById, getInscriptionsByTournoi, formatPrix } from '../../services/tournoiService';
+import { getEffectiveStatut } from '../../utils/tournoi';
+import { useRefocusRefresh } from '../../hooks/useRefocusRefresh';
 import { sportColors } from '../../theme';
 import { useColors } from '../../hooks/useColors';
 import TournoiStatCard from './components/TournoiStatCard';
@@ -59,8 +61,11 @@ export default function AdminTournoiDetailScreen({ navigation, route }: Props) {
   const [expandedId, setExpandedId]     = useState<string | null>(null);
   const scrollY = React.useRef(new Animated.Value(0)).current;
 
-  const load = useCallback(async () => {
-    setLoading(true);
+  // silent=true skips the full-screen spinner — used for background refreshes
+  // (on refocus) so the already-visible content doesn't flash back to a
+  // loading state just to pick up a count change.
+  const load = useCallback(async (silent = false) => {
+    if (!silent) setLoading(true);
     setError(false);
     try {
       const [t, ins] = await Promise.all([
@@ -73,11 +78,12 @@ export default function AdminTournoiDetailScreen({ navigation, route }: Props) {
       console.error('[AdminTournoiDetailScreen] load failed:', err);
       setError(true);
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   }, [tournoiId]);
 
   useEffect(() => { load(); }, [load]);
+  useRefocusRefresh(useCallback(() => load(true), [load]));
 
   if (loading) {
     return (
@@ -100,7 +106,7 @@ export default function AdminTournoiDetailScreen({ navigation, route }: Props) {
   }
 
   const accent     = sportColors[tournoi.sport] ?? '#3b82f6';
-  const statut     = (STATUT_CONFIG as any)[tournoi.statut] ?? STATUT_CONFIG.ouvert;
+  const statut     = (STATUT_CONFIG as any)[getEffectiveStatut(tournoi)] ?? STATUT_CONFIG.ouvert;
   const pct        = tournoi.maxEquipes > 0 ? tournoi.equipesInscrites / tournoi.maxEquipes : 0;
   const emoji      = SPORT_EMOJI_MAP[tournoi.sport] ?? '\u26bd';
   const confirmed  = inscriptions.filter(i => i.statut === 'confirmée').length;

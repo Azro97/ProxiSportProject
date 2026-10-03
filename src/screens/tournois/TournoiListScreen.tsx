@@ -14,6 +14,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { RootStackParamList, BottomTabParamList } from '../../types';
 import { Tournoi } from '../../models/Tournoi';
 import { getTournois } from '../../services/tournoiService';
+import { getEffectiveStatut } from '../../utils/tournoi';
+import { useRefocusRefresh } from '../../hooks/useRefocusRefresh';
 import { useAuthStore } from '../../stores/authStore';
 import { useColors } from '../../hooks/useColors';
 import { styles } from './TournoiListScreen.styles';
@@ -70,10 +72,11 @@ export default function TournoiListScreen({ navigation }: Props) {
   }, []);
 
   useEffect(() => { load(); }, [load]);
+  useRefocusRefresh(useCallback(() => load(true), [load]));
 
   const displayed = allTournois.filter(t => {
-    if (sportFilter  && t.sport   !== sportFilter)  return false;
-    if (statutFilter && t.statut  !== statutFilter) return false;
+    if (sportFilter  && t.sport !== sportFilter) return false;
+    if (statutFilter && getEffectiveStatut(t) !== statutFilter) return false;
     return true;
   });
 

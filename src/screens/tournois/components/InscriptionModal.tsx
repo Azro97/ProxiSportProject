@@ -42,9 +42,13 @@ interface Props {
   onClose: () => void;
   /** Closes the modal and navigates to Login/SignUp — arms a reopen-on-return in the parent screen. */
   onRequestAuth?: () => void;
+  /** Called right when a registration succeeds (before the user even taps "Parfait !"), so the
+   * parent screen can refetch equipesInscrites/statut instead of showing stale counts until the
+   * next manual refresh. */
+  onSuccess?: () => void;
 }
 
-export default function InscriptionModal({ visible, tournoi, onClose, onRequestAuth }: Props) {
+export default function InscriptionModal({ visible, tournoi, onClose, onRequestAuth, onSuccess }: Props) {
   const colors = useColors();
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const user = useAuthStore(s => s.user);
@@ -130,6 +134,7 @@ export default function InscriptionModal({ visible, tournoi, onClose, onRequestA
           montant_payé: tournoi.prixInscription,
         });
         setStep('success');
+        onSuccess?.();
       } catch (err) {
         console.error('[InscriptionModal] createInscription failed:', err);
         setErrorMessage(null);
@@ -180,6 +185,7 @@ export default function InscriptionModal({ visible, tournoi, onClose, onRequestA
       }
 
       setStep('success');
+      onSuccess?.();
     } catch (err) {
       console.error('[InscriptionModal] Stripe payment flow failed:', err);
       setErrorMessage('Vérifiez votre connexion internet et réessayez. Aucun paiement n\'a été débité.');

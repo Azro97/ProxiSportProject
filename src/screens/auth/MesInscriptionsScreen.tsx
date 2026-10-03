@@ -14,6 +14,7 @@ import { RootStackParamList } from '../../types';
 import { Inscription, InscriptionStatut } from '../../models/Inscription';
 import { Tournoi } from '../../models/Tournoi';
 import { getMyInscriptions, getTournoiById, cancelInscription } from '../../services/tournoiService';
+import { useRefocusRefresh } from '../../hooks/useRefocusRefresh';
 import { useAuthStore } from '../../stores/authStore';
 import { useColors } from '../../hooks/useColors';
 import { useThemeStore } from '../../stores/themeStore';
@@ -89,6 +90,8 @@ export default function MesInscriptionsScreen({ navigation }: Props) {
     }
     load();
   }, [initializing, user, load, navigation]);
+
+  useRefocusRefresh(useCallback(() => { if (user) load(true); }, [user, load]));
 
   async function handleLogout() {
     await signOut();
