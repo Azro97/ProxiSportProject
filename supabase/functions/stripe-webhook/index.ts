@@ -12,6 +12,7 @@
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import Stripe from 'https://esm.sh/stripe@17?target=deno';
+import { jsonResponse } from '../_shared/http.ts';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
@@ -92,9 +93,9 @@ Deno.serve(async req => {
         break;
     }
 
-    return new Response(JSON.stringify({ received: true }), { status: 200 });
+    return jsonResponse({ received: true }, 200);
   } catch (err) {
     // Non-2xx → Stripe retries the delivery with backoff.
-    return new Response(JSON.stringify({ ok: false, error: String(err) }), { status: 500 });
+    return jsonResponse({ ok: false, error: String(err) }, 500);
   }
 });

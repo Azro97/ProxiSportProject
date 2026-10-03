@@ -8,6 +8,7 @@
 // (SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY are auto-injected by the platform.)
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { jsonResponse } from '../_shared/http.ts';
 
 const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY')!;
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
@@ -146,7 +147,7 @@ Deno.serve(async req => {
   try {
     const { inscriptionId } = await req.json();
     if (!inscriptionId || typeof inscriptionId !== 'string') {
-      return new Response(JSON.stringify({ ok: false, error: 'inscriptionId is required' }), { status: 400 });
+      return jsonResponse({ ok: false, error: 'inscriptionId is required' }, 400);
     }
 
     // Service-role client: re-fetch everything server-side by id rather than
@@ -165,7 +166,7 @@ Deno.serve(async req => {
       .single();
 
     if (error || !inscription) {
-      return new Response(JSON.stringify({ ok: false, error: error?.message ?? 'inscription not found' }), { status: 404 });
+      return jsonResponse({ ok: false, error: error?.message ?? 'inscription not found' }, 404);
     }
 
     const tournoi = Array.isArray(inscription.tournois) ? inscription.tournois[0] : inscription.tournois;
@@ -204,11 +205,11 @@ Deno.serve(async req => {
 
     if (!emailRes.ok) {
       const body = await emailRes.text();
-      return new Response(JSON.stringify({ ok: false, error: `Resend error: ${body}` }), { status: 502 });
+      return jsonResponse({ ok: false, error: `Resend error: ${body}` }, 502);
     }
 
-    return new Response(JSON.stringify({ ok: true }), { status: 200 });
+    return jsonResponse({ ok: true }, 200);
   } catch (err) {
-    return new Response(JSON.stringify({ ok: false, error: String(err) }), { status: 500 });
+    return jsonResponse({ ok: false, error: String(err) }, 500);
   }
 });

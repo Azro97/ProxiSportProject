@@ -9,6 +9,7 @@
 // auto-injected by the platform.)
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { jsonResponse } from '../_shared/http.ts';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const SUPABASE_ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY')!;
@@ -19,7 +20,7 @@ Deno.serve(async req => {
   try {
     const { tournoi_id, equipe_nom, capitaine_email, membres } = await req.json();
     if (!tournoi_id || !equipe_nom || !capitaine_email || !Array.isArray(membres)) {
-      return new Response(JSON.stringify({ ok: false, error: 'Champs manquants.' }), { status: 400 });
+      return jsonResponse({ ok: false, error: 'Champs manquants.' }, 400);
     }
 
     // Identify the caller from their OWN session JWT, same pattern as
@@ -45,15 +46,15 @@ Deno.serve(async req => {
       .eq('id', tournoi_id)
       .single();
     if (tournoiError || !tournoi) {
-      return new Response(JSON.stringify({ ok: false, error: 'Tournoi introuvable.' }), { status: 404 });
+      return jsonResponse({ ok: false, error: 'Tournoi introuvable.' }, 404);
     }
 
     const montant = tournoi.prix_inscription;
     if (!montant || montant <= 0) {
-      return new Response(JSON.stringify({ ok: false, error: 'Ce tournoi est gratuit.' }), { status: 400 });
+      return jsonResponse({ ok: false, error: 'Ce tournoi est gratuit.' }, 400);
     }
     if (tournoi.statut !== 'ouvert' || new Date(tournoi.date_cloture_inscription) < new Date()) {
-      return new Response(JSON.stringify({ ok: false, error: 'Inscriptions closes pour ce tournoi.' }), { status: 400 });
+      return jsonResponse({ ok: false, error: 'Inscriptions closes pour ce tournoi.' }, 400);
     }
 
     // Atomic, row-locked capacity check + insert (statut = 'en_attente_paiement')
@@ -72,7 +73,7 @@ Deno.serve(async req => {
       },
     );
     if (rpcError) {
-      return new Response(JSON.stringify({ ok: false, error: rpcError.message }), { status: 409 });
+      return jsonResponse({ ok: false, error: rpcError.message }, 409);
     }
 
     // Stripe REST API from Deno: plain fetch, form-encoded, secret key as
@@ -100,7 +101,7 @@ Deno.serve(async req => {
     if (!stripeRes.ok) {
       // Compensate — release the reservation so the spot isn't stuck.
       await supabase.rpc('release_pending_inscription', { p_inscription_id: inscriptionId });
-      return new Response(JSON.stringify({ ok: false, error: `Stripe error: ${await stripeRes.text()}` }), { status: 502 });
+      return jsonResponse({ ok: false, error: `Stripe error: ${await stripeRes.text()}` }, 502);
     }
 
     const paymentIntent = await stripeRes.json();
@@ -111,16 +112,13 @@ Deno.serve(async req => {
       .eq('id', inscriptionId);
     if (updateError) {
       await supabase.rpc('release_pending_inscription', { p_inscription_id: inscriptionId });
-      return new Response(JSON.stringify({ ok: false, error: updateError.message }), { status: 500 });
+      return jsonResponse({ ok: false, error: updateError.message }, 500);
     }
 
     // Only the client_secret + our own id go back — never the secret key or
     // any other PaymentIntent field.
-    return new Response(
-      JSON.stringify({ ok: true, clientSecret: paymentIntent.client_secret, inscriptionId }),
-      { status: 200 },
-    );
+    return jsonResponse({ ok: true, clientSecret: paymentIntent.client_secret, inscriptionId }, 200);
   } catch (err) {
-    return new Response(JSON.stringify({ ok: false, error: String(err) }), { status: 500 });
+    return jsonResponse({ ok: false, error: String(err) }, 500);
   }
 });
