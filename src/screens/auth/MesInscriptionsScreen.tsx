@@ -202,7 +202,12 @@ export default function MesInscriptionsScreen({ navigation }: Props) {
           }
           renderItem={({ item }) => {
             const tournoi = tournois[item.tournoi_id];
-            const canCancel = item.statut !== 'annulée';
+            // Mirrors cancel_inscription's own check (policies.sql) — an
+            // en_attente_paiement row has a Stripe PaymentIntent that may
+            // still be in flight; cancelling it client-side while the charge
+            // completes server-side would leave a real payment with no
+            // registration to show for it.
+            const canCancel = item.statut === 'confirmée';
             return (
               <TouchableOpacity
                 style={[styles.card, { backgroundColor: colors.bgCard, borderColor: colors.borderHairline }]}

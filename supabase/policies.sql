@@ -106,16 +106,25 @@ declare
   v_uid uuid := auth.uid();
   v_max integer;
   v_current integer;
+  v_prix integer;
 begin
   -- Row-lock + capacity check, same pattern as create_pending_inscription_paiement()
   -- below — without this, tournois_equipes_inscrites_check (schema.sql) would
   -- just turn overselling into a raw constraint-violation error instead of a
   -- friendly one.
-  select max_equipes, equipes_inscrites into v_max, v_current
+  select max_equipes, equipes_inscrites, prix_inscription into v_max, v_current, v_prix
   from tournois where id = p_tournoi_id for update;
 
   if v_max is null then
     raise exception 'Tournoi introuvable.';
+  end if;
+  -- This RPC is grant()ed to anon/authenticated and bypasses the Stripe
+  -- payment flow entirely — without this check, anyone with the public anon
+  -- key could call it directly for a PAID tournoi and get a 'confirmée'
+  -- registration having paid nothing. Paid tournois must go through
+  -- create-payment-intent -> PaymentSheet -> stripe-webhook instead.
+  if v_prix > 0 then
+    raise exception 'Ce tournoi nécessite un paiement — utilisez le flux de paiement.';
   end if;
   if v_current >= v_max then
     raise exception 'Tournoi complet.';
@@ -160,14 +169,22 @@ begin
     raise exception 'Vous devez être connecté pour annuler une inscription.';
   end if;
 
+  -- Only a 'confirmée' row may be cancelled this way, not 'en_attente_paiement':
+  -- that row has a Stripe PaymentIntent that may still be in flight, and
+  -- cancelling it here while the charge completes server-side would leave a
+  -- real payment with no registration to show for it (confirm_inscription_paiement
+  -- would then find the row already 'annulée' and bail out needing manual
+  -- reconciliation). Let the payment resolve (succeed or get released by
+  -- stripe-webhook's payment_intent.canceled handler) before allowing a cancel.
   select tournoi_id into v_tournoi_id
   from inscriptions
   where id = p_inscription_id
     and capitaine_uid = v_uid
-    and statut <> 'annulée';
+    and statut = 'confirmée'
+  for update;
 
   if v_tournoi_id is null then
-    raise exception 'Inscription introuvable ou déjà annulée.';
+    raise exception 'Inscription introuvable, déjà annulée, ou paiement en cours (patientez qu''il se termine avant d''annuler).';
   end if;
 
   update inscriptions set statut = 'annulée' where id = p_inscription_id;
