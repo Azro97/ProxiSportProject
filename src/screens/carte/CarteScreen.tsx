@@ -210,7 +210,7 @@ export default function CarteScreen() {
         style={StyleSheet.absoluteFillObject}
         mapStyle={isDark ? STYLE_DARK : STYLE_LIGHT}
         logoEnabled={false}
-        attributionEnabled={false}
+        attributionEnabled={true}
       >
         <MapLibreGL.Camera
           ref={cameraRef}

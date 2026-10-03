@@ -8,8 +8,7 @@
     "lint": "eslint .",
     "start": "react-native start",
     "test": "jest",
-    "postinstall": "patch-package",
-    "tile-proxy": "node scripts/tileProxy.js"
+    "postinstall": "patch-package"
   },
   "dependencies": {
     "@maplibre/maplibre-react-native": "^10.4.2",

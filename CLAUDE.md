@@ -110,7 +110,7 @@ cd android
 
 | Feature | Details |
 |---|---|
-| MapLibre + tile proxy | `@maplibre/maplibre-react-native@10.4.2`, OpenFreeMap tiles, local proxy on port 7777 |
+| MapLibre | `@maplibre/maplibre-react-native@10.4.2`, OpenFreeMap tiles |
 | Match list (upcoming) | Sport / région / division / date filters via Zustand `filtresStore` |
 | Match results (scores) | Résultats tab in MatchsScreen, `scoreA`/`scoreB` on Match model |
 | Match detail | `MatchDetailScreen` — venue, date, teams, score if played |
@@ -345,11 +345,13 @@ A separate `DivisionGroupe` (`'Nationale' | 'Régionale' | 'Départementale' | '
 | Dark mode | Custom JSON style array | Just swap `styleURL` |
 
 **Before going to production (map):**
-- [ ] Replace OpenFreeMap with a provider that has an SLA:
-  - **Stadia Maps** (recommended): free up to 200K req/month, proper SLA. Sign up at `client.stadiamaps.com`, get API key, use: `https://tiles.stadiamaps.com/styles/alidade_smooth.json?api_key=YOUR_KEY`
-  - **MapTiler**: free up to 100K req/month. `https://api.maptiler.com/maps/streets/style.json?key=YOUR_KEY`
-  - Store the key in `.env` / build config, never hardcode in source
-- [ ] Re-enable attribution: set `attributionEnabled={true}` on `MapLibreGL.MapView` (OpenFreeMap terms require credit)
+- [x] **Attribution enabled — 2026-10-03.** `attributionEnabled={true}` set on `MapLibreGL.MapView` in `CarteScreen.tsx` (was `false`) — OpenFreeMap's terms require this credit regardless of which provider is in use.
+- [x] **Dead dev-only tile proxy removed — 2026-10-03.** `scripts/tileProxy.js` + the `tile-proxy` npm script existed to route around the Android emulator's occasionally-broken DNS by rewriting tile URLs to `http://10.0.2.2:7777`, but `CarteScreen.tsx`'s `STYLE_LIGHT`/`STYLE_DARK` constants only ever pointed at `https://tiles.openfreemap.org` directly — there was no `__DEV__` branch anywhere that ever activated the proxy. Confirmed dead (grepped for `10.0.2.2`/`tileProxy` across `src/` — zero references outside the unused script itself) and deleted rather than left as unexplained dead weight. If the emulator's DNS ever actually breaks again, diagnose that directly (e.g. `adb shell setprop net.dns1 8.8.8.8`) rather than resurrecting a tile-rewriting proxy.
+- [ ] **Still open: switch to Stadia Maps right before actual store submission — not before.** OpenFreeMap has no SLA (acceptable risk at current near-zero real traffic during dev/beta) but also, unlike a paid vendor, no commercial-use restriction to violate — so there's no benefit to switching early. Checked both vendors' actual current pricing pages (2026-10-03), not just assumed from memory:
+  - **Stadia Maps** (recommended — cheaper): free tier is 200K credits/month, no credit card required, but its terms explicitly **forbid commercial use** — only the paid tier does. Cheapest commercial-use plan: **$20/month**.
+  - **MapTiler**: free tier is only 5,000 map sessions/month (lower than Stadia's), also no credit card, also **forbids commercial use** on that tier. Cheapest commercial-use plan: **Flex, $30/month** — more expensive than Stadia for the same purpose.
+  - Since this app sells tournament registrations via Stripe, it's commercial the moment it's actually live on a store — so neither vendor's free tier ever becomes a long-term option, only a bridge until launch if desired. **Plan: stay on OpenFreeMap through development/beta, budget Stadia's $20/month plan for the pre-submission checklist.**
+  - When it's time: swap `CarteScreen.tsx`'s `STYLE_LIGHT`/`STYLE_DARK` from `https://tiles.openfreemap.org/styles/{bright,dark}` to `https://tiles.stadiamaps.com/styles/alidade_smooth{,_dark}.json?api_key=YOUR_KEY` — same MapLibre style-JSON format, zero other code changes (markers, camera, user-location dot are all provider-agnostic). Store the key in `.env` (new `STADIA_API_KEY`, declared in `env.d.ts` like `SENTRY_DSN`/`STRIPE_PUBLISHABLE_KEY`), never hardcode in source. Note: Stadia's "Alidade Smooth" style looks similar to OpenFreeMap's "Bright"/"Dark" but isn't pixel-identical — worth a quick visual check once switched.
 
 ---
 
