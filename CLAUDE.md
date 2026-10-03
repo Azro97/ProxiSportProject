@@ -23,7 +23,7 @@ cd ..
 & "$env:LOCALAPPDATA\Android\Sdk\platform-tools\adb.exe" install -r "android\app\build\outputs\apk\debug\app-debug.apk"
 
 # 3 - Launch
-& "$env:LOCALAPPDATA\Android\Sdk\platform-tools\adb.exe" shell am start -n "com.PP/.MainActivity"
+& "$env:LOCALAPPDATA\Android\Sdk\platform-tools\adb.exe" shell am start -n "org.proxysport.app/.MainActivity"
 ```
 
 > `adb` is not in PATH on Windows - always use the full `$env:LOCALAPPDATA` path above.
@@ -33,8 +33,8 @@ cd ..
 
 | File | Change | Why |
 |---|---|---|
-| `android/app/src/main/java/com/pp/MainApplication.java` | `SoLoader.init(this, OpenSourceMergedSoMapping.INSTANCE)` + `getReactHost()` override | New arch: merged SO mapping + ReactHost |
-| `android/app/src/debug/java/com/pp/ReactNativeFlipper.java` | No-op stub | Flipper removed in RN 0.74+ |
+| `android/app/src/main/java/org/proxysport/app/MainApplication.java` (was `com/pp/`, see app rename below) | `SoLoader.init(this, OpenSourceMergedSoMapping.INSTANCE)` + `getReactHost()` override | New arch: merged SO mapping + ReactHost |
+| `android/app/src/debug/java/org/proxysport/app/ReactNativeFlipper.java` (was `com/pp/`) | No-op stub | Flipper removed in RN 0.74+ |
 | `android/build.gradle` | `ndkVersion = \"30.0.14904198\"` | Required by RN 0.76.9 |
 | `android/gradle.properties` | `newArchEnabled=true`, `reactNativeArchitectures=x86_64`, parallel + caching | New arch; faster dev builds |
 | `android/gradlew.bat` | `--project-cache-dir C:\Temp\pp-gradle` baked in | Fixes Windows ATOMIC_MOVE crash (path has spaces) |
@@ -60,7 +60,7 @@ Upgraded React Native, React, and their toolchain to unblock the Stripe Android 
 - Two patches removed as obsolete, not because the underlying issues don't matter, but because they no longer apply to the current versions:
   - `patches/@react-native-community+cli-platform-android+14.1.2.patch` — the `native_modules.gradle` file it patched **no longer exists at all** in `cli-platform-android@20.0.0`; the whole legacy Groovy autolinking mechanism was replaced by the Gradle-plugin-native `autolinkLibrariesWithApp()` DSL call. `android/app/build.gradle`'s own `apply from: file(".../native_modules.gradle")` + `applyNativeModulesAppBuildGradle(project)` lines were removed for the same reason, replaced by `autolinkLibrariesWithApp()` inside the `react { }` block.
   - `patches/react-native-svg+15.15.5.patch` — this patch renamed Yoga's `StyleSizeLength` to `StyleLength` in `react-native-svg`'s C++ to match RN 0.76's Yoga API. RN 0.81.6's Yoga **reverted that rename back to `StyleSizeLength`**, so the patch now breaks the build instead of fixing it. The stock, unpatched `react-native-svg` source works as-is on RN 0.81.6.
-- `android/app/src/main/java/com/pp/MainApplication.java`: two API breaks fixed —
+- `android/app/src/main/java/org/proxysport/app/MainApplication.java` (was `com/pp/` at the time): two API breaks fixed —
   - `isHermesEnabled()` must now return primitive `boolean`, not boxed `Boolean` (the supertype's signature tightened)
   - `DefaultReactHost.getDefaultReactHost(this, mReactNativeHost)` no longer resolves from Java — the 2-arg call only works in Kotlin via a default parameter (`jsRuntimeFactory: JSRuntimeFactory? = null`), which Java can't use positionally. Fixed by calling the explicit 3-arg form: `getDefaultReactHost(this, mReactNativeHost, null)`.
 
@@ -283,6 +283,22 @@ Two real bugs found while setting up live Stripe payments and fixed the same day
 
 While investigating, also found the **"Inscriptions ouvertes" status badge and the register button were driven purely by `tournoi.statut`, ignoring `dateClotureInscription` entirely** — a tournoi whose close date had already passed (confirmed via direct query: 3 seeded tournaments in this exact state) still showed as open and let a user reach a payment screen that would always be rejected server-side with `"Inscriptions closes pour ce tournoi."`. Extracted the same check the server already does (`create-payment-intent`, `create_inscription()`) into one `getEffectiveStatut()` helper (`src/utils/tournoi.ts`) and used it everywhere a statut badge, register-button gate, or filter pill is computed — `TournoiDetailScreen`, `TournoiCard`, `TournoiListScreen`'s filter, `AdminDashboardScreen`, `AdminTournoiDetailScreen`.
 
+## App rename: PP → ProxiSport (2026-10-03)
+
+The app's real name ("ProxiSport") only ever lived in `app.json`/user-facing strings — the actual package identity on both platforms was still the placeholder "PP" left over from however this project was first scaffolded: Android `applicationId`/`namespace` was `com.PP`, Java package `com.pp`, iOS bundle identifier `com.PP`, `CFBundleDisplayName` "PP", Xcode project/scheme/target all named "PP". Fixed ahead of setting up TestFlight distribution, since the bundle identifier becomes **permanent** the moment it's registered with Apple/Google — better to fix now than after a real submission exists.
+
+**New identity**: display name "ProxiSport", bundle id / package **`org.proxysport.app`** (reverse-DNS of the already-registered `proxysport.org` domain).
+
+**How it was done**: via [`react-native-rename`](https://github.com/junedomingo/react-native-rename) (`npx react-native-rename "ProxiSport" -b org.proxysport.app`), the community tool built for exactly this — far safer than hand-editing Xcode's `project.pbxproj` (GUIDs, build file references, scheme files) without being able to open it in actual Xcode to verify. It correctly rewrote every file's contents (Java package declarations, `build.gradle`'s `applicationId`/`namespace`, `AndroidManifest.xml` — which needed no change since modern AGP has no `package` attribute there anymore, Info.plist, `project.pbxproj`'s internal paths, `Podfile` target names, `app.json`, `package.json`).
+
+**Gotcha hit — Windows file-lock on the two iOS folder renames.** `ios/PP` → `ios/ProxiSport` and `ios/PP.xcodeproj` → `ios/ProxiSport.xcodeproj` both failed with `EPERM`/"Accès refusé" — something (most likely the editor's own file watcher re-indexing right after the tool's writes) held a file open inside, which Windows treats as blocking a directory rename even though the ACLs looked completely normal. The tool's own output anticipates this exact failure mode ("check old .xcodeproj... delete manually"). Worked around with `robocopy /E /COPY:DAT` to copy each directory to its new name (copying files doesn't require the same exclusive lock a rename does), then deleted the old directories once free. Also had to manually rename the orphaned `xcshareddata/xcschemes/PP.xcscheme` → `ProxiSport.xcscheme` (its internal `BlueprintName`/`ReferencedContainer` content was already correctly rewritten by the tool, just not the filename) and clean up now-empty leftover `android/app/src/{debug,main,release}/java/com/` directories the Android package move left behind.
+
+**Also removed**: `android/app/google-services.json` — a dead Firebase placeholder (`project_id: "proxisport-placeholder"`, all-zero fake IDs) from before the Supabase migration, never referenced by any Gradle plugin (no `google-services` plugin applied anywhere), just stale cruft still carrying the old package name.
+
+**Updated to match**: `.github/workflows/ios-build.yml`'s `-workspace`/`-scheme` flags (were `PP.xcworkspace`/`PP`, now `ProxiSport.xcworkspace`/`ProxiSport`), and every file-path reference to the old `com/pp` Java package or `ios/PP` folder throughout this doc.
+
+**Not yet re-verified**: a full Android rebuild + the `ios-build.yml` CI run, to confirm the rename didn't break anything — do this before relying on either.
+
 ## Backend migration: Firebase Firestore → Supabase (2026-07-19)
 
 The app **no longer uses Firebase**. `@react-native-firebase/app` and `@react-native-firebase/firestore` were removed from `package.json`; `src/services/firebase.ts` was replaced by `src/services/supabase.ts` (a single `createClient()` singleton, config via `.env` / `react-native-dotenv`, `@env` module — see `src/env.d.ts`).
@@ -412,9 +428,9 @@ Researched against Apple's and Google's actual current policies plus real develo
 - **Google Play closed testing requirement, if this is a new/personal developer account.** Any personal Google Play Developer account created after November 13, 2023 must run a closed test with **12 opted-in testers for 14 continuous days** (not 12 invites — 12 people who actually accept and install it) before Google allows a production release. This takes real calendar time and needs 12 real people lined up, so it has to start well before a planned launch date, not be treated as a last-step formality. *(Needs a decision: do we already have a Play Developer account, and when was it created? If it's new, start recruiting testers now.)*
 
 **🟡 Needs doing — concrete gaps found in the project itself:**
-- **No iOS app icon exists at all** — `ios/PP/Images.xcassets/AppIcon.appiconset/` has only the `Contents.json` manifest, zero actual image files. Xcode can't archive a submittable build without these.
+- **No iOS app icon exists at all** — `ios/ProxiSport/Images.xcassets/AppIcon.appiconset/` has only the `Contents.json` manifest, zero actual image files. Xcode can't archive a submittable build without these.
 - **Android's app icon is still React Native's generic default placeholder** (checked the actual PNG — it's the white robot head on a teal grid, not a custom ProxiSport icon).
-- **`CFBundleDisplayName` in `Info.plist` is still `"PP"`**, not `"ProxiSport"` — this is what shows under the icon on a home screen.
+- [x] **`CFBundleDisplayName` fixed — 2026-10-03.** App renamed from "PP" to "ProxiSport" across both platforms (see dedicated section below) — this is what shows under the icon on a home screen.
 - **`Info.plist` is missing `UISupportedInterfaceOrientations~ipad`** (only the iPhone key exists) — a specifically-named, recurring trigger in 2026 Apple Developer Forum rejection threads for Guideline 2.1 iPad issues. Apple reviews every app on real iPad hardware regardless of declared device family (`TARGETED_DEVICE_FAMILY` isn't explicitly set anywhere in this Xcode project either — worth confirming on a Mac). You don't need an adapted iPad layout, you need to not look broken on one — this has never been tested since iOS has never been built.
 - **Privacy Manifest (`PrivacyInfo.xcprivacy`) is almost certainly incomplete.** It currently only declares React Native core's own required-reason API usage (file timestamps, UserDefaults, boot time) — it hasn't been verified to account for the third-party native SDKs (Stripe, MapLibre) that each need their own entries aggregated in here. This has never been exercised by a real Xcode archive, which is usually what surfaces missing declarations.
 - **Apple Pay isn't wired up.** Not a hard documented rule on either store, but real forum-documented rejection risk on Apple's side specifically when a reviewer expects it alongside card entry (Apple staff declined to give a yes/no when directly asked in a 2026 forum thread, calling it case-by-case). Lower priority than the items above, but worth doing before submitting, not after a rejection.

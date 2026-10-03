@@ -102,7 +102,7 @@ jobs:
         # and a non-hex id, so filtering for a line with both "platform:iOS
         # Simulator" and "OS:" reliably skips it and lands on a real device.
         run: |
-          xcodebuild -showdestinations -workspace PP.xcworkspace -scheme PP -configuration Debug 2>&1 | tee destinations.txt
+          xcodebuild -showdestinations -workspace ProxiSport.xcworkspace -scheme ProxiSport -configuration Debug 2>&1 | tee destinations.txt
           SIM_LINE=$(grep 'platform:iOS Simulator' destinations.txt | grep 'OS:' | head -n1)
           SIM_ID=$(echo "$SIM_LINE" | sed -E 's/.*id:([0-9A-Fa-f-]+),.*/\1/')
           if [ -z "$SIM_ID" ]; then
@@ -116,8 +116,8 @@ jobs:
         working-directory: ios
         run: |
           xcodebuild build \
-            -workspace PP.xcworkspace \
-            -scheme PP \
+            -workspace ProxiSport.xcworkspace \
+            -scheme ProxiSport \
             -configuration Debug \
             -destination "id=$SIM_ID" \
             CODE_SIGNING_ALLOWED=NO

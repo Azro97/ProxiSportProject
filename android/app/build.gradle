@@ -44,9 +44,9 @@ android {
 
     compileSdkVersion rootProject.ext.compileSdkVersion
 
-    namespace "com.PP"
+    namespace "org.proxysport.app"
     defaultConfig {
-        applicationId "com.PP"
+        applicationId "org.proxysport.app"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 1
