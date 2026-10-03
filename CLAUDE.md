@@ -297,7 +297,7 @@ The app's real name ("ProxiSport") only ever lived in `app.json`/user-facing str
 
 **Updated to match**: `.github/workflows/ios-build.yml`'s `-workspace`/`-scheme` flags (were `PP.xcworkspace`/`PP`, now `ProxiSport.xcworkspace`/`ProxiSport`), and every file-path reference to the old `com/pp` Java package or `ios/PP` folder throughout this doc.
 
-**Not yet re-verified**: a full Android rebuild + the `ios-build.yml` CI run, to confirm the rename didn't break anything — do this before relying on either.
+**Verified**: Android rebuild — clean, installed, launched, no crashes. The `ios-build.yml` CI run on this rename's own push failed, but at "Ensure an iOS Simulator runtime is installed" (`xcodebuild -downloadPlatform iOS` → "Unable to connect to simulator", exit 70) — a known transient GitHub Actions macOS-runner flake in that step, confirmed unrelated to the rename since it fails before `pod install` or the actual build ever run. Added a 3-attempt retry loop around that step. Still needs a clean CI pass to actually confirm the renamed Xcode project/scheme builds.
 
 ## Backend migration: Firebase Firestore → Supabase (2026-07-19)
 

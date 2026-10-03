@@ -71,8 +71,24 @@ jobs:
         # ("iOS 26.0 is not installed" with zero eligible destinations).
         # Explicitly download/install the platform for whichever Xcode is
         # now selected rather than assume one is already present.
+        #
+        # Retried up to 3 times: "xcodebuild -downloadPlatform" intermittently
+        # fails with "Unable to connect to simulator" / exit 70 on a fresh
+        # runner before the simulator service daemon is fully up - a known
+        # transient flake, not a real build problem (confirmed: it fails here
+        # before pod install or the actual build even run).
         run: |
-          xcodebuild -downloadPlatform iOS
+          for attempt in 1 2 3; do
+            if xcodebuild -downloadPlatform iOS; then
+              break
+            fi
+            echo "Attempt $attempt failed, retrying in 15s..."
+            sleep 15
+            if [ "$attempt" = "3" ]; then
+              echo "All 3 attempts failed."
+              exit 1
+            fi
+          done
           xcrun simctl list runtimes
 
       - name: Install CocoaPods dependencies
