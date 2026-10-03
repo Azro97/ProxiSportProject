@@ -151,7 +151,7 @@ cd android
 - [x] Switch off mock data — done; `USE_MOCK` flags and `src/services/mock/mockData.ts` have since been removed entirely, see "Backend migration" above
 - [ ] Full on-device emulator pass — Carte (tiles + markers), Tournois list/detail, Login/Mes Inscriptions, and the admin dashboard have all been re-verified live on-device since the Supabase cutover. Still untested: a human actually completing a PaymentSheet card payment through the app UI end-to-end (webhook → confirmation email) — the setup is live (see "Payment (Stripe)" above) but nobody has tapped through it yet — and the new admin "Créer une équipe" screen.
 - [ ] Algolia integration for team search (see §1 in "Before deploying to production" below) — still relevant on Supabase; `searchEquipes` now does a real server-side `ilike` instead of Firestore's full-fetch-then-filter, which is fine at current scale (70 équipes) but Algolia is still the right call at real-world scale
-- [ ] App icons + splash screen (both platforms)
+- [x] App icons added (both platforms, see "Bug fixes"/checklist entries below) — [ ] splash screen still not done
 - [ ] iOS first-time setup (CocoaPods, Xcode signing)
 - [ ] Release keystore + `reactNativeArchitectures` restored for multi-ABI APK
 
@@ -409,7 +409,7 @@ iOS has never been built for this project. Steps needed:
 - [ ] Generate Android `release.keystore` (see "Release / Deploy to Android" section above)
 - [ ] `reactNativeArchitectures=armeabi-v7a,arm64-v8a,x86,x86_64` restored in `gradle.properties`
 - [ ] iOS provisioning profile + signing configured in Xcode
-- [ ] App icons and splash screen added for both platforms
+- [x] App icons added for both platforms — [ ] splash screen still not done
 - [ ] Test on a real device (not emulator) before submitting to stores
 
 ### 5. App Store / Play Store submission checklist (researched 2026-10-02)
@@ -428,8 +428,8 @@ Researched against Apple's and Google's actual current policies plus real develo
 - **Google Play closed testing requirement, if this is a new/personal developer account.** Any personal Google Play Developer account created after November 13, 2023 must run a closed test with **12 opted-in testers for 14 continuous days** (not 12 invites — 12 people who actually accept and install it) before Google allows a production release. This takes real calendar time and needs 12 real people lined up, so it has to start well before a planned launch date, not be treated as a last-step formality. *(Needs a decision: do we already have a Play Developer account, and when was it created? If it's new, start recruiting testers now.)*
 
 **🟡 Needs doing — concrete gaps found in the project itself:**
-- **No iOS app icon exists at all** — `ios/ProxiSport/Images.xcassets/AppIcon.appiconset/` has only the `Contents.json` manifest, zero actual image files. Xcode can't archive a submittable build without these.
-- **Android's app icon is still React Native's generic default placeholder** (checked the actual PNG — it's the white robot head on a teal grid, not a custom ProxiSport icon).
+- [x] **App icon added, both platforms — 2026-10-03.** Source: `BigLogoPS.png` (1254×1254, provided by the user, no alpha channel) — a first version, not final branding. All required sizes generated via `sharp` (no ImageMagick/ffmpeg available on this machine) and placed directly into each platform's asset folders: Android's 5 `mipmap-*dpi/ic_launcher{,_round}.png`, iOS's 9 `AppIcon.appiconset` images (`Contents.json` updated with explicit `filename` keys — it had none before, since no images had ever been dragged in via Xcode). The 1024×1024 iOS marketing icon is explicitly flattened to opaque (`sharp().flatten()`) since App Store Connect rejects an icon with an alpha channel. Verified on Android: rebuilt, reinstalled, real icon shows instead of RN's generic default. iOS icon can only be verified once an actual Xcode archive runs (next `ios-build.yml` CI pass, or real Mac access).
+- [x] **In-app logo added to auth screens — 2026-10-03.** Same source image, resized to 512×512, saved as `src/assets/logo.png` (first image asset in the app — no prior `assets/` convention existed). Replaces the generic `UserRound` icon-in-a-colored-circle placeholder in `LoginScreen.tsx`'s and `SignUpScreen.tsx`'s brand area (`logoImage` style in `LoginScreen.styles.ts`, shared by both screens). Deliberately left `SignUpScreen.tsx`'s *other* `logoRing` usage (the `MailCheck` icon on the "check your email" success state) untouched — that's a contextual status icon, not a logo placeholder.
 - [x] **`CFBundleDisplayName` fixed — 2026-10-03.** App renamed from "PP" to "ProxiSport" across both platforms (see dedicated section below) — this is what shows under the icon on a home screen.
 - **`Info.plist` is missing `UISupportedInterfaceOrientations~ipad`** (only the iPhone key exists) — a specifically-named, recurring trigger in 2026 Apple Developer Forum rejection threads for Guideline 2.1 iPad issues. Apple reviews every app on real iPad hardware regardless of declared device family (`TARGETED_DEVICE_FAMILY` isn't explicitly set anywhere in this Xcode project either — worth confirming on a Mac). You don't need an adapted iPad layout, you need to not look broken on one — this has never been tested since iOS has never been built.
 - **Privacy Manifest (`PrivacyInfo.xcprivacy`) is almost certainly incomplete.** It currently only declares React Native core's own required-reason API usage (file timestamps, UserDefaults, boot time) — it hasn't been verified to account for the third-party native SDKs (Stripe, MapLibre) that each need their own entries aggregated in here. This has never been exercised by a real Xcode archive, which is usually what surfaces missing declarations.

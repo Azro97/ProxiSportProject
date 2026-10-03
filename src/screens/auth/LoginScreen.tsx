@@ -2,12 +2,12 @@
 
 import React, { useState } from 'react';
 import {
-  View, Text, TextInput, TouchableOpacity,
+  View, Text, TextInput, TouchableOpacity, Image,
   KeyboardAvoidingView, Platform, StatusBar, ActivityIndicator,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { ChevronLeft, Mail, Lock, Eye, EyeOff, UserRound } from 'lucide-react-native';
+import { ChevronLeft, Mail, Lock, Eye, EyeOff } from 'lucide-react-native';
 import { RootStackParamList } from '../../types';
 import { useAuthStore } from '../../stores/authStore';
 import { useColors } from '../../hooks/useColors';
@@ -66,9 +66,7 @@ export default function LoginScreen({ navigation, route }: Props) {
         <View style={[styles.content, { paddingTop: insets.top + 60 }]}>
 
           <View style={styles.brandArea}>
-            <View style={[styles.logoRing, { backgroundColor: colors.userPosition }]}>
-              <UserRound size={32} color="#fff" strokeWidth={2} />
-            </View>
+            <Image source={require('../../assets/logo.png')} style={styles.logoImage} resizeMode="cover" />
             <Text style={[styles.title, { color: colors.textPrimary }]}>Connexion</Text>
             <Text style={[styles.subtitle, { color: colors.textTertiary }]}>
               Retrouvez vos inscriptions aux tournois

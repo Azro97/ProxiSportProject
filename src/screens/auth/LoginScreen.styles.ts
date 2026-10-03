@@ -14,6 +14,9 @@ export function makeStyles(colors: ColorPalette) {
       width: 64, height: 64, borderRadius: 32, marginBottom: 14,
       alignItems: 'center', justifyContent: 'center',
     },
+    logoImage: {
+      width: 72, height: 72, borderRadius: 18, marginBottom: 14,
+    },
     title:     { fontSize: 22, fontWeight: '800', letterSpacing: -0.3 },
     subtitle:  { fontSize: 13, marginTop: 4, textAlign: 'center' },
 
