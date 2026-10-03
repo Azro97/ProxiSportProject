@@ -32,7 +32,7 @@ const SPORT_EMOJI: Record<string, string> = {
 // path as free ones — the UI still shows the real price and "Paiement
 // reçu !" so the app demos as if payment happened, but nobody is actually
 // charged. Set to false once Stripe is configured.
-const SKIP_STRIPE_FOR_BETA = true;
+const SKIP_STRIPE_FOR_BETA = false;
 
 type Step = 'choice' | 'form' | 'recap' | 'success' | 'error';
 
