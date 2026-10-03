@@ -343,6 +343,28 @@ A separate `DivisionGroupe` (`'Nationale' | 'Régionale' | 'Départementale' | '
 
 **Known caveats (disclosed, non-blocking):** the Rethel venue address in `overrides.js` is an educated guess, not independently confirmed; two low-impact venues are geographically plausible but weren't independently verified. Both are low-severity and don't affect referential integrity or app behavior.
 
+## iOS CI (GitHub Actions) — building without a Mac
+
+**Why this exists:** iOS has never been built on real Mac hardware for this project (no Mac access). `.github/workflows/ios-build.yml` runs on GitHub's `macos-latest` hosted runner instead — the only way to get a real Xcode compile (and eventually a real archive) without owning or renting one. Triggers on push to `main` when `ios/**`, `src/**`, `package.json`, `package-lock.json`, `patches/**`, or the workflow file itself changes, plus on every PR and via manual `workflow_dispatch`.
+
+**What it does today:** a Debug, **unsigned** build targeting the iOS **Simulator** (`CODE_SIGNING_ALLOWED=NO`) — proves the native project and every CocoaPod still compile, nothing more. Deliberately needs no Apple Developer account, certificate, or provisioning profile, since none of those exist yet (see "Still needed" below).
+
+**History — built in one iterative burst on 2026-07-19** (`723d7ae` → `4ac6a42`), each commit fixing one GitHub Actions macOS-runner-specific quirk hit along the way, roughly in order:
+1. Added the workflow + repaired an obsolete `react-native-svg` patch that was blocking it.
+2. Selected an older side-by-side Xcode install — `macos-latest` ships several Xcode versions, and RN 0.76-era code needs one old enough that a transitive C++ dependency's `consteval` format-string check doesn't trip a newer, stricter Clang.
+3. Set `USE_FRAMEWORKS=static` for `pod install` — `maplibre-react-native` wraps an XCFramework that doesn't support static-library linkage.
+4. Several rounds on **finding a valid simulator destination**: dropped a redundant `-destination` flag, tried the documented "Any iOS Simulator Device" placeholder (doesn't actually exist as a real destination — an open Apple Developer Forums gap since Xcode 14), then switched to dynamically discovering a real device id from `xcodebuild -showdestinations` instead of guessing a name.
+5. Explicitly installed the iOS Simulator **runtime** (`xcodebuild -downloadPlatform iOS`) — the runner only fully provisions a runtime for its *default* (newest) Xcode, and step 2 deliberately selects an older one instead, which can have zero simulator runtimes installed at all.
+6. Fixed the simulator id extraction regex pulled from `-showdestinations` output.
+
+**2026-10-03 — two more rounds, both connected to the PP→ProxiSport app rename:**
+- Updated the workflow's `-workspace`/`-scheme` flags to match (`PP.xcworkspace`/`PP` → `ProxiSport.xcworkspace`/`ProxiSport`) as part of the rename itself (`2a399db`).
+- The rename's own CI run then failed — but at the simulator-runtime-install step from item 5 above, with `"Unable to connect to simulator"` (exit 70), confirmed unrelated to the rename since it fails before `pod install` or the build step ever run. A known transient flake on a fresh runner before its simulator service daemon is fully up. Wrapped it in a 3-attempt retry loop (`5b4ed56`).
+
+**Current status:** ⏳ the retry-loop fix's own CI run was still in progress as of this write-up — first real test of whether the renamed `ProxiSport.xcodeproj`/`.xcscheme`/target actually builds clean end to end. Check `https://github.com/Azro97/ProxiSportProject/actions/workflows/ios-build.yml` for the latest result.
+
+**Still needed for TestFlight (not started):** this workflow only proves the app compiles — a signed **Release** build and an actual TestFlight upload need, in order: an active Apple Developer Program membership ($99/year — status not yet confirmed), an App Store Connect app record, a real bundle id already set to `org.proxysport.app` (see the rename above), a distribution certificate + provisioning profile (generatable entirely from CI via Fastlane `match` + an App Store Connect API key, no Mac required), and a new signed-archive-and-upload job added to this workflow (or a sibling one) — `xcodebuild archive` → `xcodebuild -exportArchive` → upload via Fastlane `pilot` or `xcrun altool`.
+
 ## Map — MapLibre GL
 
 **Library:** `@maplibre/maplibre-react-native@10.4.2`
